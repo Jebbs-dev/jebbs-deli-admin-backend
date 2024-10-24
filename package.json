@@ -15,14 +15,28 @@
   "license": "ISC",
   "dependencies": {
     "@prisma/client": "^5.21.0",
+    "bcrypt": "^5.1.1",
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "envalid": "^8.0.0",
     "express": "^4.21.1",
+    "helmet": "^8.0.0",
+    "joi": "^17.13.3",
+    "jsonwebtoken": "^9.0.2",
+    "module-alias": "^2.2.3",
+    "morgan": "^1.10.0",
     "prisma": "^5.21.0"
   },
   "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/compression": "^1.7.5",
+    "@types/cors": "^2.8.17",
     "@types/dotenv": "^6.1.1",
     "@types/express": "^5.0.0",
+    "@types/helmet": "^0.0.48",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/morgan": "^1.9.9",
     "@types/node": "^22.1.0",
     "nodemon": "^3.1.7",
     "tsc-watch": "^6.2.0",
@@ -32,9 +46,7 @@
     "@/auth": "dist/auth",
     "@/config": "dist/config",
     "@/middlewares": "dist/middlewares",
-    "@/models": "dist/models",
-    "@/tasks": "dist/tasks",
-    "@/users": "dist/users",
+    "@/modules": "dist/models",
     "@/utils": "dist/utils"
   }
 }
