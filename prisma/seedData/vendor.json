@@ -1,0 +1,202 @@
+[
+  {
+    "id": "5f3c6a04-d5c2-4a5e-b8b9-3e8e4dfe56e8",
+    "name": "The Place",
+    "email": "customerservice@theplace.com.ng",
+    "telephone": "0813 186 7091",
+    "address": "350, Maryland Mall, 360 Ikorodu Rd, Anthony, Ikeja 100211, Lagos",
+    "logo": "",
+    "isActive": true,
+    "createdAt": "2025-01-29T00:00:00Z"
+  },
+  {
+    "id": "fa1bda73-50aa-4727-a41e-02a3191a1ef6",
+    "name": "MegaChicken",
+    "email": "ikeja@megachicken.com.ng",
+    "telephone": "0906 777 9460",
+    "address": "First Gate, Agidingbi, Ikeja, Lagos",
+    "logo": "",
+    "isActive": true,
+    "createdAt": "2025-02-17T00:00:00Z"
+  },
+  {
+    "id": "3c4fc429-0117-41b3-9616-14c3d4c61ee4",
+    "name": "Chicken Republic",
+    "email": "customercare@chicken-republic.com",
+    "telephone": "0809 016 5942",
+    "address": "34 Lateef Jakande Rd, Agidingbi, Ikeja 101233, Lagos",
+    "logo": "",
+    "isActive": true,
+    "createdAt": "2025-01-21T00:00:00Z"
+  },
+  {
+    "id": "ac32f449-540e-4a5c-8f3b-df2b86d7e275",
+    "name": "Dominos Pizza",
+    "email": "info@dominos.ng",
+    "telephone": "0700 700 9999",
+    "address": "340, Idiroko, 344 Ikorodu Rd, Maryland, Lagos 105102, Lagos",
+    "logo": "",
+    "isActive": true,
+    "createdAt": "2025-02-12T00:00:00Z"
+  },
+  {
+    "id": "7b8c5d35-7f49-4f50-904b-00744f8d1785",
+    "name": "Cold Stone Creamery",
+    "email": "info@coldstonecreamery.ng",
+    "telephone": "0700 700 9999",
+    "address": "340, Idiroko, 344 Ikorodu Rd, Maryland, Lagos 105102, Lagos",
+    "logo": "",
+    "isActive": true,
+    "createdAt": "2025-02-10T00:00:00Z"
+  },
+  {
+    "id": "d746bb50-06fd-4b7f-8c45-84e4ac19e8bb",
+    "name": "Tastee Fried Chicken",
+    "email": "info@tasteefriedchicken.com",
+    "telephone": "0807 549 1182",
+    "address": "21 Opebi Rd, Allen, Ikeja 101233, Lagos",
+    "logo": "",
+    "isActive": true,
+    "createdAt": "2025-01-23T00:00:00Z"
+  },
+  {
+    "id": "81de0f8b-2166-4035-8405-fcddf8c779fc",
+    "name": "Kilimanjaro",
+    "email": "kilimanjarocare@sundryfood.com",
+    "telephone": "0810 039 3579",
+    "address": "Murtala Muhammed International Airport, Abule ijesha, Lagos 101245, Lagos",
+    "logo": "",
+    "isActive": true,
+    "createdAt": "2025-01-30T00:00:00Z"
+  },
+  {
+    "id": "3ad9bb5c-3d4a-41df-9f0f-b432b02ebf5f",
+    "name": "Jevinik Restaurant",
+    "email": "contact@jevinikrestaurant.com",
+    "telephone": "0701 586 3685",
+    "address": "21 Isaac John St, Ikeja GRA, Ikeja 101233, Lagos",
+    "logo": "",
+    "isActive": true,
+    "createdAt": "2025-02-15T00:00:00Z"
+  },
+  {
+    "id": "f586f122-2f47-49a2-b933-6b5cbdf56768",
+    "name": "Sweet Sensation",
+    "email": "info@sweetsensation.ng",
+    "telephone": "0805 209 0028",
+    "address": "62 Isaac John St, Ikeja GRA, Ikeja 101233, Lagos",
+    "logo": "",
+    "isActive": true,
+    "createdAt": "2025-02-09T00:00:00Z"
+  },
+  {
+    "id": "c4e65944-502d-4b82-87df-82d0917fc459",
+    "name": "Saints Bites Shawarma",
+    "email": "info@psaintsbites.com",
+    "telephone": "0802 346 1050",
+    "address": "2 Omofade Cres, Omole Phase 1, Ikeja 101233, Lagos",
+    "logo": "",
+    "isActive": true,
+    "createdAt": "2025-01-23T00:00:00Z"
+  },
+  {
+    "id": "84769377-bd82-4b60-a2f2-97ff1c0e7f7d",
+    "name": "Korede Spaghetti",
+    "email": "kordayty@gmail.com",
+    "telephone": "0817 813 4554",
+    "address": "UNILAG, Amphi Theatre, University Of Lagos, Lagos 101245, Lagos",
+    "logo": "",
+    "isActive": true,
+    "createdAt": "2025-02-07T00:00:00Z"
+  },
+  {
+    "id": "5626b91e-004b-4d2e-b64b-9ad4ee7db015",
+    "name": "Lala's Bistro",
+    "email": "info@lalaslagos.com",
+    "telephone": "0915 025 1251",
+    "address": "251A Sapara Williams Cl, Victoria Island, Lagos 106104, Lagos",
+    "logo": "",
+    "isActive": true,
+    "createdAt": "2025-01-19T00:00:00Z"
+  },
+  {
+    "id": "f38a936d-1193-4d64-a423-7ea063d18771",
+    "name": "Debonairs Pizza",
+    "email": "customercare@uacrestaurants.com",
+    "telephone": "0909 177 4416",
+    "address": "2 CMD Rd, Ikosi Ketu, Lagos 105102, Lagos",
+    "logo": "",
+    "isActive": true,
+    "createdAt": "2025-01-04T00:00:00Z"
+  },
+  {
+    "id": "9c2dc841-9a5d-4bff-8580-1b4dbd3d9b52",
+    "name": "Yin Yang",
+    "email": "yye@pinnahfoods.com",
+    "telephone": "0809 525 4248",
+    "address": "271 Herbert Macaulay Wy, Yaba, Lagos 101212, Lagos",
+    "logo": "",
+    "isActive": true,
+    "createdAt": "2025-01-15T00:00:00Z"
+  },
+  {
+    "id": "f1ac7a37-e040-4fd2-9a8d-04aa39f5306b",
+    "name": "Bukka Hut",
+    "email": "info@bukkahut.com",
+    "telephone": "0700 055 0055",
+    "address": "127 Ogudu Rd, Ogudu, Lagos 105102, Lagos",
+    "logo": "",
+    "isActive": true,
+    "createdAt": "2025-02-02T00:00:00Z"
+  },
+  {
+    "id": "a732f7f5-b62d-40bc-92d4-f136b00527c3",
+    "name": "Rubels and Angels",
+    "email": "rubelsangels@gmail.com",
+    "telephone": "0901 193 8616",
+    "address": "52 Ogunlana Dr, Surulere, Lagos 101283, Lagos",
+    "logo": "",
+    "isActive": true,
+    "createdAt": "2025-02-10T00:00:00Z"
+  },
+  {
+    "id": "637e527c-9e21-4f4c-8145-75968cf84841",
+    "name": "KFC",
+    "email": "email@orders.kfc.com",
+    "telephone": "0812 999 0393",
+    "address": "shop L80 and L81, mall, Obafemi Awolowo Wy, Oregun, Ikeja 100001, Lagos",
+    "logo": "",
+    "isActive": true,
+    "createdAt": "2025-02-05T00:00:00Z"
+  },
+  {
+    "id": "dd3bb8c4-261e-49e2-a3c6-9b1c2ddf94ac",
+    "name": "Amoke Oge",
+    "email": "info@amokoege.com",
+    "telephone": "0802 874 8473",
+    "address": "1 Bawala St, Pedro, Lagos 102216, Lagos",
+    "logo": "",
+    "isActive": true,
+    "createdAt": "2025-01-22T00:00:00Z"
+  },
+  {
+    "id": "ad07c798-fb7d-4b15-91c5-d0730ff6f933",
+    "name": "Placebo Restaurant and Bar",
+    "email": "info@placebolagos.com",
+    "telephone": "0904 169 5561",
+    "address": "51, Basheer Shittu Avenue, Magodo, Magodo Phase 2, Lagos",
+    "logo": "",
+    "isActive": true,
+    "createdAt": "2025-02-10T00:00:00Z"
+  },
+  {
+    "id": "5e6a3e0d-6ea3-450b-a1d0-8e1f32cda23c",
+    "name": "Papa's Grill",
+    "email": "papasgrillng@gmail.com",
+    "telephone": "0913 641 8582",
+    "address": "Local Govt, 8a Oba Akinjobi Way, Ikeja GRA, Ikeja 101233, Lagos",
+    "logo": "",
+    "isActive": true,
+    "createdAt": "2025-01-29T00:00:00Z"
+  }
+]
