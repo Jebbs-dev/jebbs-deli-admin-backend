@@ -5,8 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node dist/index.js",
-    "dev": "tsc-watch --onSuccess \"node dist/index.js\"",
+    "start": "node dist/src/index.js",
+    "dev": "tsc-watch --onSuccess \"node dist/src/index.js\"",
     "build": "tsc",
     "postinstall": "npm run build"
   },
@@ -43,10 +43,10 @@
     "typescript": "^5.6.3"
   },
   "_moduleAliases": {
-    "@/auth": "dist/auth",
-    "@/config": "dist/config",
-    "@/middlewares": "dist/middlewares",
-    "@/modules": "dist/models",
-    "@/utils": "dist/utils"
+    "@/auth": "dist/src/auth",
+    "@/config": "dist/src/config",
+    "@/middlewares": "distsrc/middlewares",
+    "@/modules": "dist/src/models",
+    "@/utils": "dist/src/utils"
   }
 }
