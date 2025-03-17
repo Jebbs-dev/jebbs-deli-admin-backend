@@ -69,7 +69,14 @@ model Vendor {
   email     String   @unique
   telephone String?
   address   String
+  billboard String?
   logo      String?
+  preparationTime String?
+  openingTime String?
+  closingTime String?
+  rating Float?
+  totalReviews Int?
+  tags String[]
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
 
@@ -121,7 +128,8 @@ model Product {
   stock       Int?
   category    Category   @default(meal)
   vendorId    String
-  discountId  String?
+  discountId  String? 
+  vendorTag String?
   // size        Size?    @relation(fields: [sizeId], references: [id])
   size        SizeValue?
   isAvailable Boolean
