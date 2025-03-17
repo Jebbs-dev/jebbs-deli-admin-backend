@@ -15,6 +15,12 @@ class App {
   public express: Application;
   public port: number;
 
+  public corsOptions = {
+    origin: "http://localhost:3000",
+    credentials:true,            //access-control-allow-credentials:true
+    optionSuccessStatus:200
+  };
+
   constructor(routers: RouteController[], port: number) {
     this.express = express();
     this.port = port;
@@ -30,7 +36,9 @@ class App {
 
   private initialiseMiddleware(): void {
     this.express.use(helmet());
-    this.express.use(cors());
+    this.express.use(cors(this.corsOptions));
+    this.express.options("*", cors());
+
     this.express.use(morgan("dev"));
     this.express.use(express.json());
     this.express.use(urlencoded({ extended: false }));
