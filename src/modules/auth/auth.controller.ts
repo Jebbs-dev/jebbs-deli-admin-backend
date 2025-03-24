@@ -33,31 +33,29 @@ class AuthController {
         },
       });
 
-      // if (userData) {
-      //   if (userData.role === "USER" && req.session.cartId) {
-      //     const guestCart = await prisma.cart.findUnique({
-      //       where: { sessionId: req.session.cartId },
-      //       include: { cartItems: true },
-      //     });
+      if (userData) {
+        if (userData.role === "USER" && req.session.cartId) {
+          const guestCart = await prisma.cart.findUnique({
+            where: { sessionId: req.session.cartId },
+            include: { cartItems: true },
+          });
 
-      //     if (guestCart) {
-      //       await prisma.cart.update({
-      //         where: { id: guestCart.id },
-      //         data: { userId: userData.id, sessionId: null },
-      //       });
-      //     }
-      //   }
-      // }
+          if (guestCart) {
+            await prisma.cart.update({
+              where: { id: guestCart.id },
+              data: { userId: userData.id, sessionId: null },
+            });
+          }
+        }
+
+        req.session.userId = userData.id;
+      }
 
       const userInfo = {
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
         user: userData,
       };
-
-      // if (userData) {
-      //   req.session.userId = userData.id;
-      // }
 
       res.status(200).json(userInfo);
     } catch (error) {
