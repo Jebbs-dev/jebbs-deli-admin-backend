@@ -42,6 +42,9 @@ class VendorService {
         orderBy: {
           createdAt: "desc",
         },
+        include:{
+          products: true
+        }
       });
 
       return vendors;
@@ -60,6 +63,9 @@ class VendorService {
     try {
       const vendor = await this.prisma.vendor.findUnique({
         where: { id: vendorId },
+        include:{
+          products: true
+        }
       });
 
       return vendor;
