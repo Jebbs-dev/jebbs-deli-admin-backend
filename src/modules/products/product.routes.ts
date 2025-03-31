@@ -33,6 +33,7 @@ class ProductRouter implements RouteController {
     );
     this.router.patch(
       `${this.path}/:id`,
+      upload("products").single("image"),
       authenticated,
       this.productController.updateProduct
     );
