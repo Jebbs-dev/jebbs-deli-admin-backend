@@ -6,6 +6,7 @@ import upload from "@/middlewares/upload/upload.middleware";
 
 class UserRouter implements RouteController {
   public path = "/users";
+  public customerPath = "/customers";
   public adminPath = "/admin";
   public router: Router = Router();
   private userController = new UserController();
@@ -19,6 +20,7 @@ class UserRouter implements RouteController {
     this.router.post(`${this.adminPath}/register`, upload("users").single("avatar"), this.userController.createAdminUser);
     this.router.post(`${this.adminPath}/vendor/register`, upload("users").single("avatar"), this.userController.createVendorAdmin);
     this.router.get(this.path, authenticated, this.userController.fetchUsers);
+    this.router.get(this.customerPath, authenticated, this.userController.fetchCustomers);
     this.router.get(`${this.path}/:id`, authenticated, this.userController.fetchUserById);
     this.router.get(`${this.path}/admins`, authenticated, this.userController.fetchAdmins);
     this.router.get(`${this.path}/vendor-admins`, authenticated, this.userController.fetchVendorAdmins);
