@@ -144,6 +144,26 @@ class UserService {
   };
 
   /**
+   * Fetch all customers
+   */
+  public fetchCustomers = async () => {
+    try {
+      const users = await this.prisma.user.findMany({
+        where: { role: "USER" },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+
+      return users;
+    } catch (error) {
+      throw new Error(
+        error instanceof Error ? error.message : "Unable to fetch users"
+      );
+    }
+  };
+
+  /**
    * Fetch a user by Id
    */
 
