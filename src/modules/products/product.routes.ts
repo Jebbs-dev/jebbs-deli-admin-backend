@@ -27,6 +27,16 @@ class ProductRouter implements RouteController {
       this.productController.fetchProducts
     );
     this.router.get(
+      `${this.path}/store/:storeId`,
+      // authenticated,
+      this.productController.fetchProductsByStore
+    );
+    this.router.get(
+      `${this.path}/:id/store/:storeId`,
+      // authenticated,
+      this.productController.fetchSingleProductByStore
+    );
+    this.router.get(
       `${this.path}/:id`,
       // authenticated,
       this.productController.fetchSingleProduct
