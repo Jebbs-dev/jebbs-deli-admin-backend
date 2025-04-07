@@ -41,7 +41,7 @@ class ProductService {
     try {
       const products = await this.prisma.product.findMany({
         include: {
-          vendor: true,
+          store: true,
         },
         orderBy: {
           createdAt: "desc",
@@ -65,7 +65,7 @@ class ProductService {
       const product = await this.prisma.product.findUnique({
         where: { id: productId },
         include: {
-          vendor: true,
+          store: true,
         },
       });
 
@@ -76,6 +76,40 @@ class ProductService {
       );
     }
   };
+
+  public fetchSingleProductByStore = async (productId: string, storeId: string) => {
+    try {
+      const product = await this.prisma.product.findUnique({
+        where: { id: productId, storeId },
+        include: {
+          store: true,
+        },
+      });
+
+      return product;
+    } catch (error) {
+      throw new Error(
+        error instanceof Error? error.message : "Unable to fetch product"
+      );
+    }
+  }
+
+  public fetchProductsByStore = async (storeId: string) => {
+    try {
+      const product = await this.prisma.product.findMany({
+        where: { storeId },
+        include: {
+          store: true,
+        },
+      });
+
+      return product;
+    } catch (error) {
+      throw new Error(
+        error instanceof Error? error.message : "Unable to fetch product"
+      );
+    }
+  }
 
   /**
    * Update a product
