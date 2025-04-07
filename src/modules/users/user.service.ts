@@ -223,6 +223,27 @@ class UserService {
     }
   };
 
+  fetchVendorAdminById = async (userId: string) => {
+    try {
+      const vendorAdmin = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          store: {
+            include: {
+              products: true,
+            },
+          },
+        }
+      });
+
+      return vendorAdmin;
+    } catch (error) {
+      throw new Error(
+        error instanceof Error? error.message : "Unable to fetch vendor admin"
+      );
+    }
+  }
+
   /**
    * Update a user
    */
@@ -230,6 +251,7 @@ class UserService {
   public updateUser = async (
     userId: string,
     userData: Partial<User>,
+    storeData?: any,
     imageFile?: Express.Multer.File
   ) => {
     try {
@@ -247,7 +269,18 @@ class UserService {
 
       const updatedUser = await this.prisma.user.update({
         where: { id: userId },
-        data: { ...userData, ...(imageUrl && { avatar: imageUrl }) },
+        data: {
+          ...userData,
+          ...(imageUrl && { avatar: imageUrl }),
+          ...(storeData && {
+            store: {
+              upsert: {
+                create: storeData,
+                update: storeData,
+              },
+            },
+          }),
+        },
       });
 
       return updatedUser;
