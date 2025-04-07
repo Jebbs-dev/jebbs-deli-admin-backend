@@ -49,7 +49,7 @@ class UserController {
     next: NextFunction
   ) => {
     try {
-      const userData  = req.body;
+      const userData = req.body;
       const imageFile = req.file;
 
       const password = hashPassword(userData.password);
@@ -80,7 +80,7 @@ class UserController {
     next: NextFunction
   ) => {
     try {
-      const { userData } = req.body;
+      const userData = req.body;
       const imageFile = req.file;
 
       const password = hashPassword(userData.password);
@@ -128,7 +128,7 @@ class UserController {
    * Fetch all customers
    */
 
-  public fetchCustomers= async (
+  public fetchCustomers = async (
     req: Request,
     res: Response,
     next: NextFunction
@@ -218,6 +218,27 @@ class UserController {
     }
   };
 
+  public fetchVendorAdminById = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { id } = req.params;
+
+      const vendorAdmin = await this.userService.fetchVendorAdminById(id);
+
+      res.status(200).send(vendorAdmin);
+    } catch (error) {
+      next(
+        new HttpException(
+          500,
+          error? (error as Error).message : "Failed to fetch vendor admin"
+        )
+      );
+    }
+  };
+
   /**
    * Update a user
    */
@@ -235,6 +256,7 @@ class UserController {
       const updatedUser = await this.userService.updateUser(
         id,
         userData,
+        userData.store,
         imageFile
       );
       res.status(200).json({ user: updatedUser });
