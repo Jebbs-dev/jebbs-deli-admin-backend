@@ -68,6 +68,47 @@ class AuthController {
     }
   };
 
+  public vendorLogin = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        throw new HttpException(400, "Email and password are required");
+      }
+      const tokens = await this.authService.login(email, password);
+
+      const userData = await this.prisma.user.findUnique({
+        where: { email },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          store: true,
+        },
+      });
+
+      const userInfo = {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        user: userData,
+      };
+
+      res.status(200).json(userInfo);
+    } catch (error) {
+      next(
+        new HttpException(
+          500,
+          error ? (error as Error).message : "Unable to login vendor"
+        )
+      );
+    }
+  };
+
   /**
    * User logout
    */
@@ -86,25 +127,55 @@ class AuthController {
   /**
    * Refresh access token using refresh token
    */
+  // public refresh = async (req: Request, res: Response, next: NextFunction) => {
+  //   const { refreshToken } = req.body;
+
+  //   if (!refreshToken) {
+  //     return next(new HttpException(401, "No refresh token provided"));
+  //   }
+
+  //   try {
+  //     const tokens = await this.authService.refresh(refreshToken);
+
+  //     res.status(200).json({
+  //       accessToken: tokens.accessToken,
+  //       refreshToken: tokens.refreshToken
+  //     });
+  //   } catch (error) {
+  //     next(
+  //       new HttpException(
+  //         403,
+  //         error instanceof Error ? error.message : "Invalid or expired refresh token"
+  //       )
+  //     );
+  //   }
+  // };
+
   public refresh = async (req: Request, res: Response, next: NextFunction) => {
+    // console.log("Refresh token request received:", req.body); // Debugging
     const { refreshToken } = req.body;
-    
+
     if (!refreshToken) {
+      console.log("No refresh token provided");
       return next(new HttpException(401, "No refresh token provided"));
     }
 
     try {
       const tokens = await this.authService.refresh(refreshToken);
-      
+      // console.log("New tokens generated:", tokens); // Debugging
+
       res.status(200).json({
         accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken
+        refreshToken: tokens.refreshToken,
       });
     } catch (error) {
+      // console.error("Error refreshing token:", error); // Debugging
       next(
         new HttpException(
           403,
-          error instanceof Error ? error.message : "Invalid or expired refresh token"
+          error instanceof Error
+            ? error.message
+            : "Invalid or expired refresh token"
         )
       );
     }
