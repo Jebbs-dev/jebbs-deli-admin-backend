@@ -30,7 +30,7 @@ async function main(){
 
 
   const orderedFileNames = [
-    "vendor.json",
+    "store.json",
     "product.json"
   ]
 

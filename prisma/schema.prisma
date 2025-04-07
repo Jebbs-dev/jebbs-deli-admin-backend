@@ -59,32 +59,38 @@ model User {
   orders   Order[]
   payments Payment[]
   Token    Token[]
+  store    Store?
 
   @@map("users")
 }
 
-model Vendor {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  telephone String?
-  address   String
-  billboard String?
-  logo      String?
+model Store {
+  id     String  @id @default(uuid())
+  name   String
+  userId String? @unique
+
+  email           String
+  telephone       String?
+  address         String
+  billboard       String?
+  logo            String?
   preparationTime String?
-  openingTime String?
-  closingTime String?
-  rating Float?
-  totalReviews Int?
-  tags String[]
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
+  openingTime     String?
+  closingTime     String?
+  rating          Float?
+  totalReviews    Int?
 
-  products Product[] @relation("VendorToProduct")
-  orders   Order[]   @relation("VendorToOrder")
-  payments Payment[] @relation("VendorToPayment")
+  tags      String[]
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
 
-  @@map("vendors")
+  admin    User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products Product[] @relation("StoreToProduct")
+  orders   Order[]   @relation("StoreToOrder")
+  payments Payment[] @relation("StoreToPayment")
+
+  @@map("stores")
 }
 
 model Cart {
@@ -127,9 +133,9 @@ model Product {
   image       String
   stock       Int?
   category    Category   @default(meal)
-  vendorId    String
-  discountId  String? 
-  vendorTag String?
+  storeId     String
+  discountId  String?
+  storeTag    String?
   // size        Size?    @relation(fields: [sizeId], references: [id])
   size        SizeValue?
   isAvailable Boolean
@@ -139,7 +145,7 @@ model Product {
 
   discount Discount? @relation(fields: [discountId], references: [id], onDelete: SetNull)
 
-  vendor Vendor @relation("VendorToProduct", fields: [vendorId], references: [id], onDelete: Cascade)
+  store Store @relation("StoreToProduct", fields: [storeId], references: [id], onDelete: Cascade)
 
   cartItems  CartItem[]
   orderItems OrderItem[]
@@ -161,7 +167,7 @@ model Discount {
 model Order {
   id         String      @id @default(uuid())
   userId     String
-  vendorId   String
+  storeId    String
   totalPrice Float
   status     OrderStatus @default(pending)
   createdAt  DateTime    @default(now())
@@ -170,7 +176,7 @@ model Order {
   orderItems OrderItem[]
   payment    Payment?
 
-  vendor Vendor @relation("VendorToOrder", fields: [vendorId], references: [id])
+  store Store @relation("StoreToOrder", fields: [storeId], references: [id])
 }
 
 model OrderItem {
@@ -187,7 +193,7 @@ model Payment {
   id            String        @id @default(uuid())
   userId        String
   orderId       String?       @unique
-  vendorId      String
+  storeId       String
   amount        Float
   reference     String        @unique
   status        PaymentStatus @default(pending)
@@ -199,7 +205,7 @@ model Payment {
   user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   order Order? @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
-  vendor Vendor @relation("VendorToPayment", fields: [vendorId], references: [id])
+  store Store @relation("StoreToPayment", fields: [storeId], references: [id])
 }
 
 model Token {
