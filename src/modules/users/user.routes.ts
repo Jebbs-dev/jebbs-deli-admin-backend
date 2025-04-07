@@ -23,7 +23,8 @@ class UserRouter implements RouteController {
     this.router.get(this.customerPath, authenticated, this.userController.fetchCustomers);
     this.router.get(`${this.path}/:id`, authenticated, this.userController.fetchUserById);
     this.router.get(`${this.path}/admins`, authenticated, this.userController.fetchAdmins);
-    this.router.get(`${this.path}/vendor-admins`, authenticated, this.userController.fetchVendorAdmins);
+    this.router.get(`${this.path}/vendor/admins`, authenticated, this.userController.fetchVendorAdmins);
+    this.router.get(`${this.path}/vendor/:id`, authenticated, this.userController.fetchVendorAdminById);
     this.router.patch(`${this.path}/:id`, authenticated, upload("users").single("avatar"), this.userController.updateUser);
     this.router.delete(`${this.path}/:id`, authenticated, this.userController.deleteUser);
   } 
