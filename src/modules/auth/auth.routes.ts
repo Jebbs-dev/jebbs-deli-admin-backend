@@ -15,6 +15,7 @@ class AuthRouter implements RouteController {
 
   private initialiseRoutes(): void {
     this.router.post(`${this.path}/login`, this.authController.login);
+    this.router.post(`${this.path}/login/vendor`, this.authController.vendorLogin);
     this.router.post(`${this.path}/logout`, authenticated, this.authController.logout);
     this.router.post(`${this.path}/refresh`, this.authController.refresh);
   }
