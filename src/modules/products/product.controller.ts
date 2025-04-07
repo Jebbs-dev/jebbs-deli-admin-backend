@@ -95,6 +95,44 @@ class ProductController {
    * Update a product
    */
 
+  // public updateProduct = async (
+  //   req: Request,
+  //   res: Response,
+  //   next: NextFunction
+  // ): Promise<void> => {
+  //   try {
+  //     const { id } = req.params;
+
+  //     const productData = req.body;
+
+  //     console.log(productData);
+
+  //     const imageFile = req.file;
+
+  //     console.log(imageFile);
+
+  //     // if (!imageFile) {
+  //     //   res.status(400).json({ message: "Image file is required" });
+  //     //   return;
+  //     // }
+
+  //     const updatedProduct = await this.productService.updateProduct(
+  //       id,
+  //       productData,
+  //       imageFile
+  //     );
+
+  //     res.status(200).send(updatedProduct);
+  //   } catch (error) {
+  //     next(
+  //       new HttpException(
+  //         500,
+  //         error ? (error as Error).message : "Failed to update product"
+  //       )
+  //     );
+  //   }
+  // };
+
   public updateProduct = async (
     req: Request,
     res: Response,
@@ -103,14 +141,15 @@ class ProductController {
     try {
       const { id } = req.params;
 
-      const productData = req.body;
+      const productData = {
+        ...req.body,
+        price: parseFloat(req.body.price), // Convert back to float
+        stock: parseInt(req.body.stock, 10), // Convert back to integer
+        isAvailable: req.body.isAvailable === "true", // Convert back to boolean
+        isFeatured: req.body.isFeatured === "true", // Convert back to boolean
+      };
 
       const imageFile = req.file;
-
-      // if (!imageFile) {
-      //   res.status(400).json({ message: "Image file is required" });
-      //   return;
-      // }
 
       const updatedProduct = await this.productService.updateProduct(
         id,
@@ -123,7 +162,57 @@ class ProductController {
       next(
         new HttpException(
           500,
-          error ? (error as Error).message : "Failed to update product"
+          error instanceof Error ? error.message : "Failed to update product"
+        )
+      );
+    }
+  };
+
+  public fetchProductsByStore = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { storeId } = req.params;
+
+      const product = await this.productService.fetchProductsByStore(storeId);
+
+      if (!product) {
+        throw new HttpException(404, "Store not found");
+      }
+
+      res.status(200).send(product);
+    } catch (error) {
+      next(
+        new HttpException(
+          500,
+          error ? (error as Error).message : "Failed to fetch Store"
+        )
+      );
+    }
+  };
+
+  public fetchSingleProductByStore = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { id, storeId } = req.params;
+
+      const product = await this.productService.fetchSingleProductByStore(id, storeId);
+
+      if (!product) {
+        throw new HttpException(404, "Store not found");
+      }
+
+      res.status(200).send(product);
+    } catch (error) {
+      next(
+        new HttpException(
+          500,
+          error ? (error as Error).message : "Failed to fetch Store"
         )
       );
     }
