@@ -33,6 +33,33 @@ class AuthService {
     }
   };
 
+  public adminLogin = async (email: string, password: string) => {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { email, role: "ADMIN" },
+        select: {
+          id: true,
+          email: true,
+          password: true,
+        },
+      });
+
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      if (comparePassword(password, user.password)) {
+        return token.createToken(user as User);
+      } else {
+        throw new Error("Wrong password!");
+      }
+    } catch (error) {
+      throw new Error(
+        error instanceof Error ? error.message : "Unable to login user"
+      );
+    }
+  };
+
   public vendorLogin = async (email: string, password: string) => {
     try {
       const user = await this.prisma.user.findUnique({

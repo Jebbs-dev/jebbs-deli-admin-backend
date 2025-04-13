@@ -68,6 +68,46 @@ class AuthController {
     }
   };
 
+  public adminLogin = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        throw new HttpException(400, "Email and password are required");
+      }
+      const tokens = await this.authService.adminLogin(email, password);
+
+      const userData = await this.prisma.user.findUnique({
+        where: { email },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+        },
+      });
+
+      const userInfo = {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        user: userData,
+      };
+
+      res.status(200).json(userInfo);
+    } catch (error) {
+      next(
+        new HttpException(
+          500,
+          error ? (error as Error).message : "Unable to login vendor"
+        )
+      );
+    }
+  };
+
   public vendorLogin = async (
     req: Request,
     res: Response,
@@ -79,7 +119,7 @@ class AuthController {
       if (!email || !password) {
         throw new HttpException(400, "Email and password are required");
       }
-      const tokens = await this.authService.login(email, password);
+      const tokens = await this.authService.vendorLogin(email, password);
 
       const userData = await this.prisma.user.findUnique({
         where: { email },
