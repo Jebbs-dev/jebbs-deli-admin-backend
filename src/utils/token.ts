@@ -10,7 +10,7 @@ if (!JWT_SECRET) {
 
 export const createToken = async (user: User) => {
   const accessToken = jwt.sign({ id: user.id }, JWT_SECRET, {
-    expiresIn: "15m",
+    expiresIn: "1d",
   });
 
   const refreshToken = jwt.sign({ id: user.id }, JWT_SECRET, {
