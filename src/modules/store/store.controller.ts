@@ -120,25 +120,36 @@ class StoreController {
   ): Promise<void> => {
     try {
       const { id } = req.params;
-      const storeData = req.body;
-      const imageFile = req.file;
-
+      const storeData = {
+        ...req.body,
+        tags: req.body.tags && JSON.parse(req.body.tags)
+      };
+  
+      const files = req.files as {
+        billboard?: Express.Multer.File[];
+        logo?: Express.Multer.File[];
+      };
+  
+      const billboardFile = files?.billboard?.[0];
+      const logoFile = files?.logo?.[0];
+  
       const updatedStore = await this.storeService.updateStore(
         id,
         storeData,
-        imageFile
+        billboardFile,
+        logoFile
       );
-
+  
       res.status(200).send(updatedStore);
     } catch (error) {
       next(
         new HttpException(
           500,
-          error ? (error as Error).message : "Failed to update Store"
+          error instanceof Error ? error.message : "Failed to update Store"
         )
       );
     }
-  };
+  };  
 
   /**
    * Delete a Store

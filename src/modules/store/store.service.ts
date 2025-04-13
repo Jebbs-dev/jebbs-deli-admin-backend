@@ -113,24 +113,37 @@ class StoreService {
   public updateStore = async (
     storeId: string,
     storeData: Partial<Store>,
-    imageFile?: Express.Multer.File
+    billboardFile?: Express.Multer.File,
+    logoFile?: Express.Multer.File
   ) => {
     try {
-      let imageUrl = undefined;
+      let billboardUrl = undefined;
+      let logoUrl = undefined;
 
-      if (imageFile) {
+      if (billboardFile) {
         const uploadResponse = await cloudinary.uploader.upload(
-          imageFile.path,
+          billboardFile.path,
           {
             folder: "stores",
           }
         );
-        imageUrl = uploadResponse.secure_url;
+        billboardUrl = uploadResponse.secure_url;
+      }
+
+      if (logoFile) {
+        const uploadResponse = await cloudinary.uploader.upload(logoFile.path, {
+          folder: "stores",
+        });
+        logoUrl = uploadResponse.secure_url;
       }
 
       const updatedStore = await this.prisma.store.update({
         where: { id: storeId },
-        data: { ...storeData, ...(imageUrl && { logo: imageUrl }) },
+        data: {
+          ...storeData,
+          ...(billboardUrl && { billboard: billboardUrl }),
+          ...(logoUrl && { logo: logoUrl }),
+        },
       });
 
       return updatedStore;
