@@ -143,10 +143,11 @@ class ProductController {
 
       const productData = {
         ...req.body,
-        price: parseFloat(req.body.price), // Convert back to float
-        stock: parseInt(req.body.stock, 10), // Convert back to integer
-        isAvailable: req.body.isAvailable === "true", // Convert back to boolean
-        isFeatured: req.body.isFeatured === "true", // Convert back to boolean
+        price: req.body.price && parseFloat(req.body.price), // Convert back to float
+        stock: req.body.stock && parseInt(req.body.stock, 10), // Convert back to integer
+        size: req.body.size ? req.body.size : null,
+        isAvailable: req.body.isAvailable && req.body.isAvailable === "true", // Convert back to boolean
+        isFeatured: req.body.isFeatured && req.body.isFeatured === "true", // Convert back to boolean
       };
 
       const imageFile = req.file;
