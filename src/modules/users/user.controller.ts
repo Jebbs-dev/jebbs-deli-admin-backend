@@ -18,7 +18,7 @@ class UserController {
     next: NextFunction
   ) => {
     try {
-      const { userData } = req.body;
+      const userData = req.body;
       const imageFile = req.file;
 
       const password = hashPassword(userData.password);
@@ -233,7 +233,7 @@ class UserController {
       next(
         new HttpException(
           500,
-          error? (error as Error).message : "Failed to fetch vendor admin"
+          error ? (error as Error).message : "Failed to fetch vendor admin"
         )
       );
     }
