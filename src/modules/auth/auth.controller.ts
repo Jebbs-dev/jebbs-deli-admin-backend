@@ -37,7 +37,7 @@ class AuthController {
         if (userData.role === "USER" && req.session.cartId) {
           const guestCart = await prisma.cart.findUnique({
             where: { sessionId: req.session.cartId },
-            include: { cartItems: true },
+            include: { cartGroups: true },
           });
 
           if (guestCart) {
