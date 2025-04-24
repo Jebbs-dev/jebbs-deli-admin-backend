@@ -294,6 +294,27 @@ class UserController {
       );
     }
   };
+
+  public addAddress = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const addressData = req.body;
+
+      await this.userService.addAddress(addressData);
+
+      res.status(200).send("Address added successfully");
+    } catch (error) {
+      next(
+        new HttpException(
+          500,
+          error ? (error as Error).message : "Failed to add address"
+        )
+      );
+    }
+  };
 }
 
 export default UserController;

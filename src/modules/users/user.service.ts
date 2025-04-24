@@ -1,5 +1,5 @@
 import prisma from "@/utils/prisma";
-import { User } from "@prisma/client";
+import { Address, User } from "@prisma/client";
 import cloudinary from "@/config/cloudinary";
 
 class UserService {
@@ -233,16 +233,16 @@ class UserService {
               products: true,
             },
           },
-        }
+        },
       });
 
       return vendorAdmin;
     } catch (error) {
       throw new Error(
-        error instanceof Error? error.message : "Unable to fetch vendor admin"
+        error instanceof Error ? error.message : "Unable to fetch vendor admin"
       );
     }
-  }
+  };
 
   /**
    * Update a user
@@ -303,6 +303,18 @@ class UserService {
       });
 
       return true;
+    } catch (error) {
+      throw new Error(
+        error instanceof Error ? error.message : "Unable to delete user"
+      );
+    }
+  };
+
+  public addAddress = async (addressData: Address) => {
+    try {
+      await this.prisma.address.create({
+        data: addressData,
+      });
     } catch (error) {
       throw new Error(
         error instanceof Error ? error.message : "Unable to delete user"
