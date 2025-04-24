@@ -51,6 +51,7 @@ model User {
   password  String
   telephone String?
   avatar    String?
+  address   String?
   role      Role     @default(USER)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -79,51 +80,65 @@ model Store {
   closingTime     String?
   rating          Float?
   totalReviews    Int?
+  deliveryFee     Float @default(0)
 
   tags      String[]
   isActive  Boolean   @default(true)
   createdAt DateTime  @default(now())
   updatedAt DateTime? @updatedAt
 
-  admin    User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  products Product[] @relation("StoreToProduct")
-  orders   Order[]   @relation("StoreToOrder")
-  payments Payment[] @relation("StoreToPayment")
+  admin          User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products       Product[]        @relation("StoreToProduct")
+  orders         Order[]          @relation("StoreToOrder")
+  payments       Payment[]        @relation("StoreToPayment")
+  CartStoreGroup CartStoreGroup[]
+  OrderItem      OrderItem[]
 
   @@map("stores")
 }
 
+model Address {
+  id          String   @id @default(uuid())
+  description String
+  place_id    String
+  reference   String
+  types       String[]
+  createdAt   DateTime @default(now())
+}
+
 model Cart {
   id         String   @id @default(uuid())
-  userId     String?  @unique // Nullable for guest users
-  sessionId  String?  @unique // For guest users, store session-based carts
+  userId     String?  @unique
+  sessionId  String?  @unique
   totalPrice Float
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  cartGroups CartStoreGroup[]
+  user       User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CartStoreGroup {
+  id        String   @id @default(uuid())
+  cartId    String
+  storeId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cart      Cart       @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  store     Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
   cartItems CartItem[]
-  user      User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model CartItem {
-  id        String @id @default(uuid())
-  cartId    String
-  productId String
-  quantity  Int
+  id               String @id @default(uuid())
+  cartStoreGroupId String
+  productId        String
+  quantity         Int
 
-  cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  cartStoreGroup CartStoreGroup @relation(fields: [cartStoreGroupId], references: [id], onDelete: Cascade)
+  product        Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
-
-// model Size {
-//   id        String    @id @default(uuid())
-//   name      String
-//   value     SizeValue @default(medium)
-//   createdAt DateTime  @default(now())
-//   updatedAt DateTime  @updatedAt
-
-//   products Product[]
-// }
 
 model Product {
   id          String     @id @default(uuid())
@@ -165,28 +180,38 @@ model Discount {
 }
 
 model Order {
-  id         String      @id @default(uuid())
-  userId     String
-  storeId    String
-  totalPrice Float
-  status     OrderStatus @default(pending)
-  createdAt  DateTime    @default(now())
+  id              String      @id @default(uuid())
+  userId          String
+  storeId         String
+  serviceFee      Float
+  deliveryFee     Float
+  subTotal        Float
+  totalPrice      Float
+  vendorAddress   String
+  customerAddress String
+  status          OrderStatus @default(pending)
+  createdAt       DateTime    @default(now())
 
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payment Payment?
+
   orderItems OrderItem[]
-  payment    Payment?
+  store      Store       @relation("StoreToOrder", fields: [storeId], references: [id])
 
-  store Store @relation("StoreToOrder", fields: [storeId], references: [id])
+  @@map("orders")
 }
 
 model OrderItem {
   id        String @id @default(uuid())
+  storeId   String
   orderId   String
   productId String
   quantity  Int
 
-  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  store   Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 
 model Payment {
