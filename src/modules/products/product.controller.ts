@@ -91,6 +91,21 @@ class ProductController {
     }
   };
 
+  public fetchFilteredProduct =  async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> =>{
+    try {
+      const query = req.query; // Capture filters from URL
+      const products = await this.productService.fetchFilteredProducts(query);
+      res.json(products);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Server error' });
+    }
+  }
+
   /**
    * Update a product
    */

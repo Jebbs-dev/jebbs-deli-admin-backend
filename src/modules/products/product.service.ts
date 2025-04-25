@@ -77,7 +77,10 @@ class ProductService {
     }
   };
 
-  public fetchSingleProductByStore = async (productId: string, storeId: string) => {
+  public fetchSingleProductByStore = async (
+    productId: string,
+    storeId: string
+  ) => {
     try {
       const product = await this.prisma.product.findUnique({
         where: { id: productId, storeId },
@@ -89,10 +92,10 @@ class ProductService {
       return product;
     } catch (error) {
       throw new Error(
-        error instanceof Error? error.message : "Unable to fetch product"
+        error instanceof Error ? error.message : "Unable to fetch product"
       );
     }
-  }
+  };
 
   public fetchProductsByStore = async (storeId: string) => {
     try {
@@ -106,10 +109,30 @@ class ProductService {
       return product;
     } catch (error) {
       throw new Error(
-        error instanceof Error? error.message : "Unable to fetch product"
+        error instanceof Error ? error.message : "Unable to fetch product"
       );
     }
-  }
+  };
+
+  public fetchFilteredProducts = async (filters?: any) => {
+    const { category, isFeatured, storeId, name } = filters;
+
+    const whereClause: any = {};
+
+    if (category) whereClause.category = category;
+    if (isFeatured !== undefined)
+      whereClause.isFeatured = isFeatured === "true";
+    if (storeId) whereClause.storeId = storeId;
+    if (name) whereClause.name = { contains: name, mode: "insensitive" };
+
+    return prisma.product.findMany({
+      where: whereClause,
+      orderBy: { createdAt: "desc" },
+      include: {
+        store: true,
+      },
+    });
+  };
 
   /**
    * Update a product

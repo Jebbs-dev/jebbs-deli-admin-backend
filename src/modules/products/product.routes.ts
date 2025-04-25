@@ -21,10 +21,15 @@ class ProductRouter implements RouteController {
       upload("products").single("image"),
       this.productController.addProduct
     );
+    // this.router.get(
+    //   this.path,
+    //   // authenticated,
+    //   this.productController.fetchProducts
+    // );
     this.router.get(
-      this.path,
+      `${this.path}`,
       // authenticated,
-      this.productController.fetchProducts
+      this.productController.fetchFilteredProduct
     );
     this.router.get(
       `${this.path}/store/:storeId`,
