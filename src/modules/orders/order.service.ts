@@ -71,6 +71,7 @@ class OrderService {
           orderItems: {
             include: {
               product: true,
+              store: true,
             },
           },
         },
@@ -93,6 +94,7 @@ class OrderService {
           orderItems: {
             include: {
               product: true,
+              store: true,
             },
           },
         },
@@ -112,7 +114,12 @@ class OrderService {
       const order = await this.prisma.order.findUnique({
         where: { id: orderId },
         include: {
-          orderItems: true,
+          orderItems: {
+            include: {
+              product: true,
+              store: true,
+            },
+          },
         },
       });
 
@@ -127,7 +134,15 @@ class OrderService {
       const order = await this.prisma.order.findMany({
         where: { storeId: storeId },
         include: {
-          orderItems: true,
+          orderItems: {
+            include: {
+              product: true,
+              store: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
         },
       });
 
