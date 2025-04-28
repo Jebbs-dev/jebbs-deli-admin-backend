@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import OrderService from "./order.service";
+import HttpException from "@/utils/exceptions/http.exception";
 
 class OrderController {
   private orderService = new OrderService();
@@ -16,7 +17,12 @@ class OrderController {
 
       res.status(201).json({ order });
     } catch (error) {
-      next(new Error("Unable to create order"));
+      next(
+        new HttpException(
+          500,
+          error ? (error as Error).message : "Failed to delete product"
+        )
+      );
     }
   };
 
@@ -37,7 +43,12 @@ class OrderController {
 
       res.status(200).json({ updatedOrder });
     } catch (error) {
-      next(new Error("Unable to update order"));
+      next(
+        new HttpException(
+          500,
+          error ? (error as Error).message : "Failed to delete product"
+        )
+      );
     }
   };
 
@@ -51,7 +62,31 @@ class OrderController {
 
       res.status(200).send(orders);
     } catch (error) {
-      next(new Error("Unable to fetch orders"));
+      next(
+        new HttpException(
+          500,
+          error ? (error as Error).message : "Failed to delete product"
+        )
+      );
+    }
+  };
+
+  public fetchFilteredOrders = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const query = req.query;
+      const orders = await this.orderService.fetchFilteredOrders(query);
+      res.status(200).send(orders);
+    } catch (error) {
+      next(
+        new HttpException(
+          500,
+          error ? (error as Error).message : "Failed to delete product"
+        )
+      );
     }
   };
 
@@ -67,7 +102,12 @@ class OrderController {
 
       res.status(200).send(orders);
     } catch (error) {
-      next(new Error("Unable to fetch orders"));
+      next(
+        new HttpException(
+          500,
+          error ? (error as Error).message : "Failed to delete product"
+        )
+      );
     }
   };
 
@@ -87,7 +127,12 @@ class OrderController {
 
       res.status(200).send(order);
     } catch (error) {
-      next(new Error("Unable to fetch order"));
+      next(
+        new HttpException(
+          500,
+          error ? (error as Error).message : "Failed to delete product"
+        )
+      );
     }
   };
 
@@ -107,7 +152,12 @@ class OrderController {
 
       res.status(200).send(order);
     } catch (error) {
-      next(new Error("Unable to fetch order"));
+      next(
+        new HttpException(
+          500,
+          error ? (error as Error).message : "Failed to delete product"
+        )
+      );
     }
   };
 
@@ -123,7 +173,12 @@ class OrderController {
 
       res.status(204).send();
     } catch (error) {
-      next(new Error("Unable to delete order"));
+      next(
+        new HttpException(
+          500,
+          error ? (error as Error).message : "Failed to delete product"
+        )
+      );
     }
   };
 }
