@@ -26,8 +26,9 @@ class OrderService {
 
       return newOrder;
     } catch (error) {
-      console.error("Error creating order:", error); // Log the error for debugging
-      throw new Error("Unable to create order");
+      throw new Error(
+        error instanceof Error ? error.message : "Unable to create order"
+      );
     }
   };
 
@@ -50,7 +51,9 @@ class OrderService {
 
       return updatedOrder;
     } catch (error) {
-      throw new Error("Unable to update order");
+      throw new Error(
+        error instanceof Error ? error.message : "Unable to update order"
+      );
     }
   };
 
@@ -60,7 +63,9 @@ class OrderService {
         where: { id: orderId },
       });
     } catch (error) {
-      throw new Error("Unable to delete order");
+      throw new Error(
+        error instanceof Error ? error.message : "Unable to delete order"
+      );
     }
   };
 
@@ -82,30 +87,159 @@ class OrderService {
 
       return orders;
     } catch (error) {
-      throw new Error("Unable to fetch orders");
+      throw new Error(
+        error instanceof Error ? error.message : "Unable to fetch orders"
+      );
     }
   };
 
-  public fetchOrdersByUserId = async (userId: string) => {
+  public fetchFilteredOrders = async (filters?: any) => {
+    const {
+      search,
+      offset,
+      storeId,
+      userId,
+      limit,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+      startDate,
+      endDate,
+    } = filters;
+
     try {
-      const orders = await this.prisma.order.findMany({
-        where: { userId: userId },
-        include: {
-          orderItems: {
-            include: {
-              product: true,
-              store: true,
+      const whereClause: any = {};
+
+      if (userId) whereClause.userId = userId;
+      if (storeId) whereClause.storeId = storeId;
+      if (search) {
+        const searchTerm = search.toLowerCase();
+
+        const findStatus = this.getOrderEnum(searchTerm);
+
+        whereClause.OR = [
+          // { name: { contains: search, mode: "insensitive" } },
+          ...(findStatus ? [{ status: findStatus }] : []),
+        ];
+      }
+
+      if (startDate || endDate) {
+        whereClause.createdAt = {
+          ...(startDate && { gte: new Date(startDate) }),
+          ...(endDate && { lte: new Date(endDate) }),
+        };
+      }
+
+      const offsetNumber = offset !== undefined ? parseInt(offset, 10) : 0;
+      const limitNumber = limit !== undefined ? parseInt(limit, 10) : 10;
+
+      const [orders, total] = await prisma.$transaction([
+        prisma.order.findMany({
+          where: whereClause,
+          orderBy: {
+            [sortBy]: sortOrder.toLowerCase() === "asc" ? "asc" : "desc",
+          },
+          include: {
+            user: true,
+            orderItems: {
+              include: {
+                product: true,
+                store: true,
+              },
             },
           },
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
+          skip: offsetNumber,
+          take: limitNumber,
+        }),
+        prisma.order.count({ where: whereClause }),
+      ]);
 
-      return orders;
+      return {
+        orders,
+        limit: limitNumber,
+        offset: offsetNumber,
+        total,
+        next: offsetNumber + limitNumber < total,
+        previous: offsetNumber > 0,
+      };
     } catch (error) {
-      throw new Error("Unable to fetch orders");
+      throw new Error(
+        error instanceof Error ? error.message : "Unable to fetch orders"
+      );
+    }
+  };
+
+  public fetchFilteredOrdersByUserId = async (userId: string, filters?: any) => {
+    const {
+      search,
+      offset,
+      limit,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+      startDate,
+      endDate,
+    } = filters;
+
+    
+    
+    try {
+      const whereClause: any = {
+        userId
+      };
+   
+      if (search) {
+        const searchTerm = search.toLowerCase();
+
+        const findStatus = this.getOrderEnum(searchTerm);
+
+        whereClause.OR = [
+          // { name: { contains: search, mode: "insensitive" } },
+          ...(findStatus ? [{ status: findStatus }] : []),
+        ];
+      }
+
+      if (startDate || endDate) {
+        whereClause.createdAt = {
+          ...(startDate && { gte: new Date(startDate) }),
+          ...(endDate && { lte: new Date(endDate) }),
+        };
+      }
+
+      const offsetNumber = offset !== undefined ? parseInt(offset, 10) : 0;
+      const limitNumber = limit !== undefined ? parseInt(limit, 10) : 10;
+
+      const [orders, total] = await prisma.$transaction([
+        prisma.order.findMany({
+          where: whereClause,
+          orderBy: {
+            [sortBy]: sortOrder.toLowerCase() === "asc" ? "asc" : "desc",
+          },
+          include: {
+            user: true,
+            orderItems: {
+              include: {
+                product: true,
+                store: true,
+              },
+            },
+          },
+          skip: offsetNumber,
+          take: limitNumber,
+        }),
+        prisma.order.count({ where: whereClause }),
+      ]);
+
+      return {
+        orders,
+        limit: limitNumber,
+        offset: offsetNumber,
+        total,
+        next: offsetNumber + limitNumber < total,
+        previous: offsetNumber > 0,
+      };
+    } catch (error) {
+      throw new Error(
+        error instanceof Error ? error.message : "Unable to fetch orders"
+      );
     }
   };
 
@@ -125,31 +259,90 @@ class OrderService {
 
       return order;
     } catch (error) {
-      throw new Error("Unable to fetch order");
+      throw new Error(
+        error instanceof Error ? error.message : "Unable to fetch order"
+      );
     }
   };
 
-  public fetchOrderByStoreId = async (storeId: string) => {
+  public fetchFilteredOrderByStoreId = async (storeId: string, filters?: any) => {
+    const {
+      search,
+      offset,
+      limit,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+      startDate,
+      endDate,
+    } = filters;
+
     try {
-      const order = await this.prisma.order.findMany({
-        where: { storeId: storeId },
-        include: {
-          orderItems: {
-            include: {
-              product: true,
-              store: true,
+      const whereClause: any = {
+        storeId,
+      };
+
+      if (search) {
+        const searchTerm = search.toLowerCase();
+
+        const findStatus = this.getOrderEnum(searchTerm);
+
+        whereClause.OR = [
+          // { name: { contains: search, mode: "insensitive" } },
+          ...(findStatus ? [{ status: findStatus }] : []),
+        ];
+      }
+
+      if (startDate || endDate) {
+        whereClause.createdAt = {
+          ...(startDate && { gte: new Date(startDate) }),
+          ...(endDate && { lte: new Date(endDate) }),
+        };
+      }
+
+      const offsetNumber = offset !== undefined ? parseInt(offset, 10) : 0;
+      const limitNumber = limit !== undefined ? parseInt(limit, 10) : 10;
+
+      const [orders, total] = await prisma.$transaction([
+        prisma.order.findMany({
+          where: whereClause,
+          orderBy: {
+            [sortBy]: sortOrder.toLowerCase() === "asc" ? "asc" : "desc",
+          },
+          include: {
+            user: true,
+            orderItems: {
+              include: {
+                product: true,
+                store: true,
+              },
             },
           },
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
+          skip: offsetNumber,
+          take: limitNumber,
+        }),
+        prisma.order.count({ where: whereClause }),
+      ]);
 
-      return order;
+      return {
+        orders,
+        limit: limitNumber,
+        offset: offsetNumber,
+        total,
+        next: offsetNumber + limitNumber < total,
+        previous: offsetNumber > 0,
+      };
     } catch (error) {
-      throw new Error("Unable to fetch order");
+      throw new Error(
+        error instanceof Error ? error.message : "Unable to fetch orders"
+      );
     }
+  };
+
+  public getOrderEnum = (searchTerm: string) => {
+    const orderStatuses = ["pending", "delivered", "cancelled"];
+
+    const matched = orderStatuses.find((c) => c.toLowerCase() === searchTerm);
+    return matched ?? null;
   };
 }
 
