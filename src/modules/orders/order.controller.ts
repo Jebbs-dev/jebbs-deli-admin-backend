@@ -20,7 +20,7 @@ class OrderController {
       next(
         new HttpException(
           500,
-          error ? (error as Error).message : "Failed to delete product"
+          error ? (error as Error).message : "Failed to create order"
         )
       );
     }
@@ -46,7 +46,7 @@ class OrderController {
       next(
         new HttpException(
           500,
-          error ? (error as Error).message : "Failed to delete product"
+          error ? (error as Error).message : "Failed to update order"
         )
       );
     }
@@ -65,7 +65,7 @@ class OrderController {
       next(
         new HttpException(
           500,
-          error ? (error as Error).message : "Failed to delete product"
+          error ? (error as Error).message : "Failed to fetch orders"
         )
       );
     }
@@ -84,28 +84,29 @@ class OrderController {
       next(
         new HttpException(
           500,
-          error ? (error as Error).message : "Failed to delete product"
+          error ? (error as Error).message : "Failed to fetch orders"
         )
       );
     }
   };
 
-  public fetchOrdersByUserId = async (
+  public fetchFilteredOrdersByUserId = async (
     req: Request,
     res: Response,
     next: NextFunction
   ) => {
     try {
       const { userId } = req.params;
+      const query = req.query;
 
-      const orders = await this.orderService.fetchOrdersByUserId(userId);
+      const orders = await this.orderService.fetchFilteredOrdersByUserId(userId, query);
 
       res.status(200).send(orders);
     } catch (error) {
       next(
         new HttpException(
           500,
-          error ? (error as Error).message : "Failed to delete product"
+          error ? (error as Error).message : "Failed to fetch orders"
         )
       );
     }
@@ -130,21 +131,22 @@ class OrderController {
       next(
         new HttpException(
           500,
-          error ? (error as Error).message : "Failed to delete product"
+          error ? (error as Error).message : "Failed to fetch order"
         )
       );
     }
   };
 
-  public fetchOrderByStoreId = async (
+  public fetchFilteredOrderByStoreId = async (
     req: Request,
     res: Response,
     next: NextFunction
   ) => {
     try {
       const { storeId } = req.params;
+      const query = req.query;
 
-      const order = await this.orderService.fetchOrderByStoreId(storeId);
+      const order = await this.orderService.fetchFilteredOrderByStoreId(storeId, query);
 
       if (!order) {
         throw new Error("Order not found");
@@ -155,7 +157,7 @@ class OrderController {
       next(
         new HttpException(
           500,
-          error ? (error as Error).message : "Failed to delete product"
+          error ? (error as Error).message : "Failed to fetch orders"
         )
       );
     }
@@ -176,7 +178,7 @@ class OrderController {
       next(
         new HttpException(
           500,
-          error ? (error as Error).message : "Failed to delete product"
+          error ? (error as Error).message : "Failed to delete order"
         )
       );
     }
