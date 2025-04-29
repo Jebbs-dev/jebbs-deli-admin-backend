@@ -134,7 +134,9 @@ class UserController {
     next: NextFunction
   ) => {
     try {
-      const users = await this.userService.fetchCustomers();
+      const query = req.query;
+
+      const users = await this.userService.fetchFilteredCustomers(query);
 
       res.status(200).send(users);
     } catch (error) {
@@ -182,7 +184,9 @@ class UserController {
     next: NextFunction
   ) => {
     try {
-      const admins = await this.userService.fetchAdmins();
+      const query = req.query;
+
+      const admins = await this.userService.fetchFilteredAdmins(query);
 
       res.status(200).send(admins);
     } catch (error) {
@@ -205,7 +209,11 @@ class UserController {
     next: NextFunction
   ) => {
     try {
-      const vendorAdmins = await this.userService.fetchVendorAdmins();
+      const query = req.query;
+
+      const vendorAdmins = await this.userService.fetchFilteredVendorAdmins(
+        query
+      );
 
       res.status(200).send(vendorAdmins);
     } catch (error) {

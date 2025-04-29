@@ -146,16 +146,62 @@ class UserService {
   /**
    * Fetch all customers
    */
-  public fetchCustomers = async () => {
-    try {
-      const users = await this.prisma.user.findMany({
-        where: { role: "USER" },
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
+  public fetchFilteredCustomers = async (filters?: any) => {
+    const {
+      search,
+      offset,
+      limit,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+      startDate,
+      endDate,
+    } = filters || {};
 
-      return users;
+    try {
+      const whereClause: any = {
+        role: "USER",
+      };
+
+      if (search) {
+        whereClause.OR = [
+          { name: { contains: search, mode: "insensitive" } },
+          { address: { contains: search, mode: "insensitive" } },
+        ];
+      }
+
+      if (startDate || endDate) {
+        whereClause.createdAt = {
+          ...(startDate && { gte: new Date(startDate) }),
+          ...(endDate && { lte: new Date(endDate) }),
+        };
+      }
+
+      const offsetNumber = offset !== undefined ? parseInt(offset, 10) : 0;
+      const limitNumber = limit !== undefined ? parseInt(limit, 10) : 10;
+
+      const [customers, total] = await prisma.$transaction([
+        prisma.user.findMany({
+          where: whereClause,
+          orderBy: {
+            [sortBy]: sortOrder.toLowerCase() === "asc" ? "asc" : "desc",
+          },
+          include: {
+            store: true,
+          },
+          skip: offsetNumber,
+          take: limitNumber,
+        }),
+        prisma.user.count({ where: whereClause }),
+      ]);
+
+      return {
+        customers,
+        limit: limitNumber,
+        offset: offsetNumber,
+        total,
+        next: offsetNumber + limitNumber < total,
+        previous: offsetNumber > 0,
+      };
     } catch (error) {
       throw new Error(
         error instanceof Error ? error.message : "Unable to fetch users"
@@ -185,16 +231,62 @@ class UserService {
    * Fetch all admins
    */
 
-  public fetchAdmins = async () => {
-    try {
-      const admins = await this.prisma.user.findMany({
-        where: { role: "ADMIN" },
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
+  public fetchFilteredAdmins = async (filters?: any) => {
+    const {
+      search,
+      offset,
+      limit,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+      startDate,
+      endDate,
+    } = filters || {};
 
-      return admins;
+    try {
+      const whereClause: any = {
+        role: "ADMIN",
+      };
+
+      if (search) {
+        whereClause.OR = [
+          { name: { contains: search, mode: "insensitive" } },
+          { address: { contains: search, mode: "insensitive" } },
+        ];
+      }
+
+      if (startDate || endDate) {
+        whereClause.createdAt = {
+          ...(startDate && { gte: new Date(startDate) }),
+          ...(endDate && { lte: new Date(endDate) }),
+        };
+      }
+
+      const offsetNumber = offset !== undefined ? parseInt(offset, 10) : 0;
+      const limitNumber = limit !== undefined ? parseInt(limit, 10) : 10;
+
+      const [users, total] = await prisma.$transaction([
+        prisma.user.findMany({
+          where: whereClause,
+          orderBy: {
+            [sortBy]: sortOrder.toLowerCase() === "asc" ? "asc" : "desc",
+          },
+          include: {
+            store: true,
+          },
+          skip: offsetNumber,
+          take: limitNumber,
+        }),
+        prisma.user.count({ where: whereClause }),
+      ]);
+
+      return {
+        users,
+        limit: limitNumber,
+        offset: offsetNumber,
+        total,
+        next: offsetNumber + limitNumber < total,
+        previous: offsetNumber > 0,
+      };
     } catch (error) {
       throw new Error(
         error instanceof Error ? error.message : "Unable to fetch admins"
@@ -206,16 +298,62 @@ class UserService {
    * Fetch all vendor admins
    */
 
-  public fetchVendorAdmins = async () => {
-    try {
-      const vendorAdmins = await this.prisma.user.findMany({
-        where: { role: "VENDOR" },
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
+  public fetchFilteredVendorAdmins = async (filters?: any) => {
+    const {
+      search,
+      offset,
+      limit,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+      startDate,
+      endDate,
+    } = filters || {};
 
-      return vendorAdmins;
+    try {
+      const whereClause: any = {
+        role: "VENDOR",
+      };
+
+      if (search) {
+        whereClause.OR = [
+          { name: { contains: search, mode: "insensitive" } },
+          { address: { contains: search, mode: "insensitive" } },
+        ];
+      }
+
+      if (startDate || endDate) {
+        whereClause.createdAt = {
+          ...(startDate && { gte: new Date(startDate) }),
+          ...(endDate && { lte: new Date(endDate) }),
+        };
+      }
+
+      const offsetNumber = offset !== undefined ? parseInt(offset, 10) : 0;
+      const limitNumber = limit !== undefined ? parseInt(limit, 10) : 10;
+
+      const [users, total] = await prisma.$transaction([
+        prisma.user.findMany({
+          where: whereClause,
+          orderBy: {
+            [sortBy]: sortOrder.toLowerCase() === "asc" ? "asc" : "desc",
+          },
+          include: {
+            store: true,
+          },
+          skip: offsetNumber,
+          take: limitNumber,
+        }),
+        prisma.user.count({ where: whereClause }),
+      ]);
+
+      return {
+        users,
+        limit: limitNumber,
+        offset: offsetNumber,
+        total,
+        next: offsetNumber + limitNumber < total,
+        previous: offsetNumber > 0,
+      };
     } catch (error) {
       throw new Error(
         error instanceof Error ? error.message : "Unable to fetch vendor admins"
