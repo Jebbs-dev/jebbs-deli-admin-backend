@@ -48,18 +48,60 @@ class StoreService {
   /**
    * Fetch all Stores
    */
-  public fetchStores = async () => {
-    try {
-      const stores = await this.prisma.store.findMany({
-        orderBy: {
-          createdAt: "desc",
-        },
-        include: {
-          products: true,
-        },
-      });
+  public fetchFilteredStores = async (filters?: any) => {
+    const {
+      search,
+      offset,
+      limit,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+      startDate,
+      endDate,
+    } = filters || {};
 
-      return stores;
+    try {
+      const whereClause: any = {};
+
+      if (search) {
+        whereClause.OR = [
+          { name: { contains: search, mode: "insensitive" } },
+          { address: { contains: search, mode: "insensitive" } },
+        ];
+      }
+
+      if (startDate || endDate) {
+        whereClause.createdAt = {
+          ...(startDate && { gte: new Date(startDate) }),
+          ...(endDate && { lte: new Date(endDate) }),
+        };
+      }
+
+      const offsetNumber = offset !== undefined ? parseInt(offset, 10) : 0;
+      const limitNumber = limit !== undefined ? parseInt(limit, 10) : 10;
+
+      const [stores, total] = await prisma.$transaction([
+        prisma.store.findMany({
+          where: whereClause,
+          orderBy: {
+            [sortBy]: sortOrder.toLowerCase() === "asc" ? "asc" : "desc",
+          },
+          include: {
+            products: true,
+          },
+          skip: offsetNumber,
+          take: limitNumber,
+        }),
+        prisma.store.count({ where: whereClause }),
+      ]);
+
+      return {
+        stores,
+        limit: limitNumber,
+        offset: offsetNumber,
+        total,
+        next: offsetNumber + limitNumber < total,
+        previous: offsetNumber > 0,
+      };
     } catch (error) {
       throw new Error(
         error instanceof Error ? error.message : "Unable to fetch Stores"

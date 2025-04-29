@@ -35,13 +35,15 @@ class StoreController {
    * Fetch all Stores
    */
 
-  public fetchStores = async (
+  public fetchFilteredStores = async (
     req: Request,
     res: Response,
     next: NextFunction
   ) => {
     try {
-      const stores = await this.storeService.fetchStores();
+      const query = req.query;
+
+      const stores = await this.storeService.fetchFilteredStores(query);
 
       res.status(200).send(stores);
     } catch (error) {
