@@ -91,20 +91,26 @@ class ProductController {
     }
   };
 
-  public fetchFilteredProduct =  async (
+  public fetchFilteredProducts = async (
     req: Request,
     res: Response,
     next: NextFunction
-  ): Promise<void> =>{
+  ): Promise<void> => {
     try {
       const query = req.query; // Capture filters from URL
+
       const products = await this.productService.fetchFilteredProducts(query);
-      res.json(products);
+
+      res.status(200).send(products);
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Server error' });
+      next(
+        new HttpException(
+          500,
+          error ? (error as Error).message : "Failed to fetch Store"
+        )
+      );
     }
-  }
+  };
 
   /**
    * Update a product
@@ -209,6 +215,35 @@ class ProductController {
     }
   };
 
+  public fetchFilteredProductsByStore = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { storeId } = req.params;
+      const query = req.query;
+
+      const product = await this.productService.fetchFilteredProductsByStore(
+        storeId,
+        query
+      );
+
+      if (!product) {
+        throw new HttpException(404, "Store not found");
+      }
+
+      res.status(200).json(product);
+    } catch (error) {
+      next(
+        new HttpException(
+          500,
+          error ? (error as Error).message : "Failed to fetch Store"
+        )
+      );
+    }
+  };
+
   public fetchSingleProductByStore = async (
     req: Request,
     res: Response,
@@ -217,7 +252,10 @@ class ProductController {
     try {
       const { id, storeId } = req.params;
 
-      const product = await this.productService.fetchSingleProductByStore(id, storeId);
+      const product = await this.productService.fetchSingleProductByStore(
+        id,
+        storeId
+      );
 
       if (!product) {
         throw new HttpException(404, "Store not found");

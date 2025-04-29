@@ -29,12 +29,12 @@ class ProductRouter implements RouteController {
     this.router.get(
       `${this.path}`,
       // authenticated,
-      this.productController.fetchFilteredProduct
+      this.productController.fetchFilteredProducts
     );
     this.router.get(
       `${this.path}/store/:storeId`,
       // authenticated,
-      this.productController.fetchProductsByStore
+      this.productController.fetchFilteredProductsByStore
     );
     this.router.get(
       `${this.path}/:id/store/:storeId`,

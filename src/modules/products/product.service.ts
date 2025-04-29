@@ -115,23 +115,151 @@ class ProductService {
   };
 
   public fetchFilteredProducts = async (filters?: any) => {
-    const { category, isFeatured, storeId, name } = filters;
+    const {
+      search,
+      isFeatured,
+      storeId,
+      offset,
+      limit,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+      startDate,
+      endDate,
+    } = filters || {};
 
     const whereClause: any = {};
 
-    if (category) whereClause.category = category;
+    if (search) {
+      const searchTerm = search.toLowerCase();
+
+      const findCategory = this.getCategoryEnum(searchTerm);
+
+      whereClause.OR = [
+        { name: { contains: search, mode: "insensitive" } },
+        ...(findCategory ? [{ category: findCategory }] : []),
+      ];
+    }
+
     if (isFeatured !== undefined)
       whereClause.isFeatured = isFeatured === "true";
     if (storeId) whereClause.storeId = storeId;
-    if (name) whereClause.name = { contains: name, mode: "insensitive" };
 
-    return prisma.product.findMany({
-      where: whereClause,
-      orderBy: { createdAt: "desc" },
-      include: {
-        store: true,
-      },
-    });
+    if (startDate || endDate) {
+      whereClause.createdAt = {
+        ...(startDate && { gte: new Date(startDate) }),
+        ...(endDate && { lte: new Date(endDate) }),
+      };
+    }
+
+    const offsetNumber = offset !== undefined ? parseInt(offset, 10) : 0;
+    const limitNumber = limit !== undefined ? parseInt(limit, 10) : 10;
+
+    const [products, total] = await prisma.$transaction([
+      prisma.product.findMany({
+        where: whereClause,
+        orderBy: {
+          [sortBy]: sortOrder.toLowerCase() === "asc" ? "asc" : "desc",
+        },
+        include: {
+          store: true,
+        },
+        skip: offsetNumber,
+        take: limitNumber,
+      }),
+      prisma.product.count({ where: whereClause }),
+    ]);
+
+    return {
+      products,
+      limit: limitNumber,
+      offset: offsetNumber,
+      total,
+      next: offsetNumber + limitNumber < total,
+      previous: offsetNumber > 0,
+    };
+  };
+
+  public fetchFilteredProductsByStore = async (
+    storeId: string,
+    filters?: any
+  ) => {
+    const {
+      search,
+      offset,
+      limit,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+      startDate,
+      endDate,
+    } = filters || {};
+
+    try {
+      const whereClause: any = {
+        storeId,
+      };
+
+      if (search) {
+        const searchTerm = search.toLowerCase();
+
+        const findCategory = this.getCategoryEnum(searchTerm);
+
+        whereClause.OR = [
+          { name: { contains: search, mode: "insensitive" } },
+          ...(findCategory ? [{ category: findCategory }] : []),
+        ];
+      }
+
+      if (startDate || endDate) {
+        whereClause.createdAt = {
+          ...(startDate && { gte: new Date(startDate) }),
+          ...(endDate && { lte: new Date(endDate) }),
+        };
+      }
+
+      const offsetNumber = offset !== undefined ? parseInt(offset, 10) : 0;
+      const limitNumber = limit !== undefined ? parseInt(limit, 10) : 10;
+
+      // const products = prisma.product.findMany({
+      //   where: whereClause,
+      //   orderBy: {
+      //     [sortBy]: sortOrder.toLowerCase() === "asc" ? "asc" : "desc",
+      //   },
+      //   skip: offsetNumber,
+      //   take: limitNumber,
+      // });
+
+      // const total = await prisma.product.count({
+      //   where: whereClause,
+      // });
+
+      const [products, total] = await prisma.$transaction([
+        prisma.product.findMany({
+          where: whereClause,
+          orderBy: {
+            [sortBy]: sortOrder.toLowerCase() === "asc" ? "asc" : "desc",
+          },
+          include: {
+            store: true,
+          },
+          skip: offsetNumber,
+          take: limitNumber,
+        }),
+        prisma.product.count({ where: whereClause }),
+      ]);
+
+      return {
+        products,
+        limit: limitNumber,
+        offset: offsetNumber,
+        total,
+        next: offsetNumber + limitNumber < total,
+        previous: offsetNumber > 0,
+      };
+    } catch (error) {
+      throw new Error(
+        error instanceof Error ? error.message : "Unable to update product"
+      );
+    }
   };
 
   /**
@@ -188,6 +316,22 @@ class ProductService {
         error instanceof Error ? error.message : "Unable to delete product"
       );
     }
+  };
+
+  public getCategoryEnum = (searchTerm: string) => {
+    const allCategories = [
+      "meal",
+      "drink",
+      "snack",
+      "dessert",
+      "sides",
+      "small_chops",
+      "chicken",
+      "pizza",
+      "burger",
+    ];
+    const matched = allCategories.find((c) => c.toLowerCase() === searchTerm);
+    return matched ?? null;
   };
 }
 
