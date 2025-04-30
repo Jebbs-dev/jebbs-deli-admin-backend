@@ -16,7 +16,9 @@ class CartRouter implements RouteController {
 
   initialiseRoutes() {
     this.router.post(this.path, this.cartController.addToCart);
-    this.router.get(this.path, this.cartController.getCart);
+
+    this.router.get(`${this.path}/:userId`, this.cartController.getCart);
+
     this.router.put(`${this.path}/:id`, this.cartController.updateCart);
     this.router.delete(`${this.path}/:id`, this.cartController.deleteCart);
   }

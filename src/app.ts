@@ -3,6 +3,7 @@ import compression from "compression";
 import cors from "cors";
 import morgan from "morgan";
 import helmet from "helmet";
+import crypto from "crypto";
 
 import errorMiddleware from "@/middlewares/error/error.middleware";
 import RouteController from "@/utils/interfaces/route.controller.interface";
@@ -23,18 +24,38 @@ class App {
     this.initialiseMiddleware();
     this.initialiseRouters(routers);
     this.initialiseErrorHandling();
-    // this.handleCartSession();
+    this.handleCartSession();
   }
 
 
 
   private initialiseMiddleware(): void {
     this.express.use(helmet());
-    this.express.use(cors());
+    this.express.use(cors(
+      {
+      origin: process.env.FRONTEND_URL || "http://localhost:3000",
+      credentials: true
+    }
+  ));
+    this.express.options("*", cors());
+
     this.express.use(morgan("dev"));
     this.express.use(express.json());
     this.express.use(urlencoded({ extended: false }));
     this.express.use(compression());
+    
+    // Initialize session middleware
+    this.express.use(
+      session({
+        secret: process.env.SESSION_SECRET || 'cart-session-secret',
+        resave: false,
+        saveUninitialized: true,
+        cookie: {
+          secure: process.env.NODE_ENV === 'production',
+          maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        }
+      })
+    );
   }
 
   private initialiseRouters(routers: RouteController[]): void {
@@ -52,19 +73,9 @@ class App {
   }
 
   private handleCartSession(): void {
-    // Implement session management for shopping cart
-    session({
-      secret: 'cart-session',
-      resave: false,
-      saveUninitialized: true,
-      cookie: { secure: false }, // Set to true in production
-    })
-
-    this.express.use((req: Request,
-      res: Response,
-      next: NextFunction) => {
+    this.express.use((req: Request, res: Response, next: NextFunction) => {
       if (!req.session.cartId) {
-        req.session.cartId = crypto.randomUUID(); // Generate a unique cart session ID
+        req.session.cartId = crypto.randomUUID();
       }
       next();
     });
