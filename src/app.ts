@@ -34,8 +34,7 @@ class App {
   private initialiseMiddleware(): void {
     this.express.use(helmet());
     this.express.use(
-      cors(
-        {
+      cors({
         // origin: (origin, callback) => {
         //   if (!origin || this.allowedOrigins.includes(origin)) {
         //     callback(null, true);
@@ -44,8 +43,7 @@ class App {
         //   }
         // },
         credentials: true,
-      }
-    )
+      })
     );
     this.express.options("*", cors());
 
