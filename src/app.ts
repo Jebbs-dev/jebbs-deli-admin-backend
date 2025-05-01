@@ -11,10 +11,14 @@ import session from "express-session";
 
 import { Request, Response, NextFunction } from "express";
 
-
 class App {
   public express: Application;
   public port: number;
+
+  // public allowedOrigins = [
+  //   "http://localhost:3000", // dev
+  //   "https://jebbs-deli.vercel.app/", // staging
+  // ];
 
   constructor(routers: RouteController[], port: number) {
     this.express = express();
@@ -27,33 +31,39 @@ class App {
     this.handleCartSession();
   }
 
-
-
   private initialiseMiddleware(): void {
     this.express.use(helmet());
-    this.express.use(cors(
-      {
-      origin: process.env.FRONTEND_URL || "http://localhost:3000",
-      credentials: true
-    }
-  ));
+    this.express.use(
+      cors(
+        {
+        // origin: (origin, callback) => {
+        //   if (!origin || this.allowedOrigins.includes(origin)) {
+        //     callback(null, true);
+        //   } else {
+        //     callback(new Error("Not allowed by CORS"));
+        //   }
+        // },
+        credentials: true,
+      }
+    )
+    );
     this.express.options("*", cors());
 
     this.express.use(morgan("dev"));
     this.express.use(express.json());
     this.express.use(urlencoded({ extended: false }));
     this.express.use(compression());
-    
+
     // Initialize session middleware
     this.express.use(
       session({
-        secret: process.env.SESSION_SECRET || 'cart-session-secret',
+        secret: process.env.SESSION_SECRET || "cart-session-secret",
         resave: false,
         saveUninitialized: true,
         cookie: {
-          secure: process.env.NODE_ENV === 'production',
-          maxAge: 24 * 60 * 60 * 1000 // 24 hours
-        }
+          secure: process.env.NODE_ENV === "production",
+          maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        },
       })
     );
   }
