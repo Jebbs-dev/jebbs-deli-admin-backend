@@ -15,10 +15,10 @@ class App {
   public express: Application;
   public port: number;
 
-  // public allowedOrigins = [
-  //   "http://localhost:3000", // dev
-  //   "https://jebbs-deli.vercel.app/", // staging
-  // ];
+  public allowedOrigins = [
+    "http://localhost:3000", // dev
+    "https://jebbs-deli.vercel.app/", // staging
+  ];
 
   constructor(routers: RouteController[], port: number) {
     this.express = express();
@@ -36,13 +36,13 @@ class App {
     this.express.use(
       cors(
         {
-        // origin: (origin, callback) => {
-        //   if (!origin || this.allowedOrigins.includes(origin)) {
-        //     callback(null, true);
-        //   } else {
-        //     callback(new Error("Not allowed by CORS"));
-        //   }
-        // },
+        origin: (origin, callback) => {
+          if (!origin || this.allowedOrigins.includes(origin)) {
+            callback(null, true);
+          } else {
+            callback(new Error("Not allowed by CORS"));
+          }
+        },
         credentials: true,
       }
     )
