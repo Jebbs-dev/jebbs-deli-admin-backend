@@ -17,7 +17,8 @@ class App {
 
   public allowedOrigins = [
     "http://localhost:3000", // dev
-    "https://jebbs-deli.vercel.app", // staging
+    "https://jebbs-deli.vercel.app",
+    "https://jebbs-deli-admin.vercel.app"
   ];
 
   constructor(routers: RouteController[], port: number) {
