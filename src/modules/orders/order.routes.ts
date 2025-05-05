@@ -16,8 +16,9 @@ class OrderRouter implements RouteController {
 
   initialiseRoutes() {
     this.router.post(this.path, this.orderController.createOrder);
-    // this.router.get(`${this.path}`, this.orderController.fetchOrders);
     this.router.get(`${this.path}`, this.orderController.fetchFilteredOrders);
+    this.router.get(`${this.path}/count`, this.orderController.fetchOrdersCount);
+    this.router.get(`${this.path}/store/:storeId/count`, this.orderController.fetchOrdersCountByStore);
     this.router.get(`${this.path}/:userId`, this.orderController.fetchFilteredOrdersByUserId);
     this.router.get(`${this.path}/:id`, this.orderController.fetchSingleOrder);
     this.router.get(`${this.path}/store/:storeId`, this.orderController.fetchFilteredOrderByStoreId);

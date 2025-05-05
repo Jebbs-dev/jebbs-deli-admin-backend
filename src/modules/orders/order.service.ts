@@ -69,23 +69,47 @@ class OrderService {
     }
   };
 
-  public fetchOrders = async () => {
+  public fetchOrdersCount = async () => {
     try {
-      const orders = await this.prisma.order.findMany({
-        include: {
-          orderItems: {
-            include: {
-              product: true,
-              store: true,
+      const [orders, totalOrders] = await prisma.$transaction([
+        prisma.order.findMany({
+          orderBy: {
+            createdAt: "desc",
+          },
+          include: {
+            orderItems: {
+              include: {
+                product: true,
+                store: true,
+              },
             },
           },
-        },
-        orderBy: {
-          createdAt: "desc",
+        }),
+        prisma.order.count({}),
+      ]);
+
+      return {
+        orders,
+        totalOrders,
+      };
+    } catch (error) {
+      throw new Error(
+        error instanceof Error ? error.message : "Unable to fetch orders"
+      );
+    }
+  };
+
+  public fetchOrdersCountByStore = async (storeId: string) => {
+    try {
+      const totalOrders = await prisma.order.count({
+        where: {
+          storeId,
         },
       });
 
-      return orders;
+      return {
+        totalOrders,
+      };
     } catch (error) {
       throw new Error(
         error instanceof Error ? error.message : "Unable to fetch orders"
@@ -168,7 +192,10 @@ class OrderService {
     }
   };
 
-  public fetchFilteredOrdersByUserId = async (userId: string, filters?: any) => {
+  public fetchFilteredOrdersByUserId = async (
+    userId: string,
+    filters?: any
+  ) => {
     const {
       search,
       offset,
@@ -179,13 +206,11 @@ class OrderService {
       endDate,
     } = filters;
 
-    
-    
     try {
       const whereClause: any = {
-        userId
+        userId,
       };
-   
+
       if (search) {
         const searchTerm = search.toLowerCase();
 
@@ -265,7 +290,10 @@ class OrderService {
     }
   };
 
-  public fetchFilteredOrderByStoreId = async (storeId: string, filters?: any) => {
+  public fetchFilteredOrderByStoreId = async (
+    storeId: string,
+    filters?: any
+  ) => {
     const {
       search,
       offset,
