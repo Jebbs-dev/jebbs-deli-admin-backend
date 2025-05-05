@@ -101,13 +101,28 @@ class OrderService {
 
   public fetchOrdersCountByStore = async (storeId: string) => {
     try {
-      const totalOrders = await prisma.order.count({
-        where: {
-          storeId,
-        },
-      });
+      const [orders, totalOrders] = await prisma.$transaction([
+        prisma.order.findMany({
+          where: {
+            storeId,
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+          include: {
+            orderItems: {
+              include: {
+                product: true,
+                store: true,
+              },
+            },
+          },
+        }),
+        prisma.order.count({}),
+      ]);
 
       return {
+        orders,
         totalOrders,
       };
     } catch (error) {
