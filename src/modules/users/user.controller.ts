@@ -124,6 +124,25 @@ class UserController {
     }
   };
 
+  public fetchCustomerCount = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const customers = await this.userService.fetchCustomerCount();
+
+      res.status(200).send(customers);
+    } catch (error) {
+      next(
+        new HttpException(
+          500,
+          error ? (error as Error).message : "Failed to fetch users"
+        )
+      );
+    }
+  };
+
   /**
    * Fetch all customers
    */
@@ -136,9 +155,9 @@ class UserController {
     try {
       const query = req.query;
 
-      const users = await this.userService.fetchFilteredCustomers(query);
+      const customers = await this.userService.fetchFilteredCustomers(query);
 
-      res.status(200).send(users);
+      res.status(200).send(customers);
     } catch (error) {
       next(
         new HttpException(

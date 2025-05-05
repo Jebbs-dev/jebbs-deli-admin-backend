@@ -143,6 +143,24 @@ class UserService {
     }
   };
 
+  public fetchCustomerCount = async () => {
+    try {
+      const totalCustomers = await prisma.user.count({
+        where: {
+          role: "USER",
+        },
+      });
+
+      return {
+        totalCustomers
+      };
+    } catch (error) {
+      throw new Error(
+        error instanceof Error ? error.message : "Unable to fetch users"
+      );
+    }
+  };
+
   /**
    * Fetch all customers
    */
