@@ -56,6 +56,22 @@ class ProductService {
     }
   };
 
+  public fetchProductsCount = async (storeId: string) => {
+    try {
+      const totalProducts = await this.prisma.product.count({
+        where: {
+          storeId,
+        },
+      });
+
+      return { totalProducts };
+    } catch (error) {
+      throw new Error(
+        error instanceof Error ? error.message : "Unable to fetch products"
+      );
+    }
+  };
+
   /**
    * Fetch a product by id
    */

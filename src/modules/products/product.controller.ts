@@ -62,6 +62,27 @@ class ProductController {
     }
   };
 
+  public fetchProductsCount = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { storeId } = req.params;
+
+      const products = await this.productService.fetchProductsCount(storeId);
+
+      res.status(200).send(products);
+    } catch (error) {
+      next(
+        new HttpException(
+          500,
+          error ? (error as Error).message : "Failed to fetch products"
+        )
+      );
+    }
+  };
+
   /**
    * Fetch a product by Id
    */
