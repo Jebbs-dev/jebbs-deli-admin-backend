@@ -21,6 +21,7 @@ class VendorRouter implements RouteController {
       this.storeController.registerStore
     ); //http://localhost:8080/api/Store/register
     this.router.get(this.path, this.storeController.fetchFilteredStores);
+    this.router.get(`${this.path}/count`, authenticated, this.storeController.fetchStoreCount);
     this.router.get(`${this.path}/:id`, this.storeController.fetchSingleStore);
     this.router.get(
       `${this.path}/:id`,

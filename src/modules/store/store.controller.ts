@@ -56,6 +56,26 @@ class StoreController {
     }
   };
 
+
+  public fetchStoreCount = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    try {
+      const orders = await this.storeService.fetchStoreCount();
+
+      res.status(200).send(orders);
+    } catch (error) {
+      next(
+        new HttpException(
+          500,
+          error ? (error as Error).message : "Failed to fetch orders"
+        )
+      );
+    }
+  };
+
   /**
    * Fetch a Store by Id
    */

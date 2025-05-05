@@ -109,6 +109,18 @@ class StoreService {
     }
   };
 
+  public fetchStoreCount = async () => {
+    try {
+      const totalStores = await this.prisma.store.count({});
+
+      return { totalStores };
+    } catch (error) {
+      throw new Error(
+        error instanceof Error ? error.message : "Unable to fetch products"
+      );
+    }
+  };
+
   /**
    * Fetch single Store
    */
