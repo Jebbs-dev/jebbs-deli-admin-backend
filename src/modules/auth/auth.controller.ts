@@ -23,6 +23,19 @@ class AuthController {
       }
       const tokens = await this.authService.login(email, password);
 
+      const user = await this.prisma.user.findUnique({
+        where: { email },
+        select: {
+          role: true,
+        },
+      });
+
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      const isVendor = user.role === "VENDOR";
+
       const userData = await this.prisma.user.findUnique({
         where: { email },
         select: {
@@ -30,6 +43,7 @@ class AuthController {
           name: true,
           email: true,
           role: true,
+          ...(isVendor && { store: true }),
         },
       });
 
