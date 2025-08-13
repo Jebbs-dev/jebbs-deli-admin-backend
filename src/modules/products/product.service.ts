@@ -273,7 +273,7 @@ class ProductService {
       };
     } catch (error) {
       throw new Error(
-        error instanceof Error ? error.message : "Unable to update product"
+        error instanceof Error ? error.message : "Unable to fetch products"
       );
     }
   };
