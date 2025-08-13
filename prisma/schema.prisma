@@ -37,11 +37,16 @@ enum OrderStatus {
   cancelled
 }
 
+// Payment status enum
 enum PaymentStatus {
   pending
+  processing
   success
   failed
-  refunded
+  abandoned
+  reversed
+  ongoing
+  queued
 }
 
 model User {
@@ -80,7 +85,7 @@ model Store {
   closingTime     String?
   rating          Float?
   totalReviews    Int?
-  deliveryFee     Float @default(0)
+  deliveryFee     Float   @default(0)
 
   tags      String[]
   isActive  Boolean   @default(true)
@@ -214,23 +219,86 @@ model OrderItem {
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 
+// Main Payment schema - clean business logic
 model Payment {
   id            String        @id @default(uuid())
   userId        String
-  orderId       String?       @unique
+  orderId       String        @unique
   storeId       String
-  amount        Float
-  reference     String        @unique
+  amount        Float 
+  reference     String        @unique 
   status        PaymentStatus @default(pending)
-  paymentMethod String
+  paymentMethod String?
   currency      String        @default("NGN")
+  description   String?
   createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
   paidAt        DateTime?
 
-  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  order Order? @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  // Relationships
+  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order               Order?               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  store               Store                @relation("StoreToPayment", fields: [storeId], references: [id])
+  paystackTransaction PaystackTransaction?
 
-  store Store @relation("StoreToPayment", fields: [storeId], references: [id])
+  @@index([userId])
+  @@index([storeId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model PaystackTransaction {
+  id        BigInt @unique
+  paymentId String @unique
+
+  reference     String  @unique
+  receiptNumber String?
+
+  message String?
+  accessCode  String?
+
+  currency String @default("NGN")
+  amount   Int
+
+  plan               Json?
+  split              Json?
+  subaccount         Json?
+  orderId            String?
+  requestedAmount    String?
+  source             Json?
+  connect            Json?
+  posTransactionData Json?
+
+  fees           Int?
+  feesSplit      Int?
+
+  status          PaymentStatus @default(pending)
+  channel         String?
+  gatewayResponse String? 
+
+  domain        String  @default("live") 
+  ipAddress     String? 
+  metadata      Json? 
+  log           Json?
+  authorization Json?
+  customer      Json?
+
+  webhookVerified   Boolean   @default(false)
+  webhookSignature  String?
+  webhookReceivedAt DateTime?
+
+
+  createdAt DateTime  @default(now())
+  paidAt    DateTime? // When paid on Paystack
+
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([id])
+  @@index([reference])
+  @@index([accessCode])
+  @@index([status])
+  @@index([webhookVerified])
 }
 
 model Token {
