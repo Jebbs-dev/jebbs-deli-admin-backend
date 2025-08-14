@@ -29,7 +29,7 @@ class PaymentController {
       next(
         new HttpException(
           500,
-          error ? (error as Error).message : "Failed to initliase payment"
+          error ? (error as Error).message : "Failed to initialise payment"
         )
       );
     }
