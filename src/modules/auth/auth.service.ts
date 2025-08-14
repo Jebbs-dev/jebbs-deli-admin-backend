@@ -24,7 +24,7 @@ class AuthService {
       if (comparePassword(password, user.password)) {
         return token.createToken(user as User);
       } else {
-        throw new Error("Wrong password!");
+        throw new Error("Wrong credentials!");
       }
     } catch (error) {
       throw new Error(
