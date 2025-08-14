@@ -22,8 +22,13 @@ const fetchPaystackResponse = async (
     },
   };
 
-  const response = await method(url, data, config);
-  return response;
+  // If the method is GET, pass only config
+  if (method === axios.get) {
+    return await method(url, config);
+  }
+
+  // For POST, send data + config
+  return await method(url, data, config);
 };
 
 export const InitialiseTransaction = async (data: Record<string, any>) => {
