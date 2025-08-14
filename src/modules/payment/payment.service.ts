@@ -7,6 +7,7 @@ import {
   listTransactions,
   verifyTransaction,
 } from "@/utils/payment";
+import { access } from "fs";
 
 class PaymentService {
   private prisma = prisma;
@@ -28,23 +29,28 @@ class PaymentService {
     try {
       const createdPayment = await this.prisma.payment.create({
         data: {
-          // other relevant fields
-          amount: parseFloat(data.amount) / 100, // store amount in Naira or dollars
+          amount: parseFloat(data.amount) / 100,
           userId,
           storeId,
           orderId,
           reference,
           currency: data.currency,
         },
-        include: {
-          paystackTransaction: true,
+      });
+
+      await this.prisma.paystackTransaction.create({
+        data: {
+          reference,
+          paymentId: createdPayment.id,
+          amount: createdPayment.amount,
+          currency: createdPayment.currency,
         },
       });
 
       return {
         payment: createdPayment,
         redirectUrl: authorization_url,
-        access_code
+        access_code,
       };
     } catch (error) {
       throw new Error(
@@ -58,9 +64,31 @@ class PaymentService {
 
     const dataFromPaystackResponse = paystackResponse.data;
 
+    // return paystackResponse;
+
     try {
-      await prisma.paystackTransaction.create({
-        data: dataFromPaystackResponse,
+      await this.prisma.paystackTransaction.update({
+        where: {
+          reference,
+        },
+        data: {
+          id: BigInt(dataFromPaystackResponse.id),
+          receiptNumber: dataFromPaystackResponse.receipt_number,
+          requestedAmount: dataFromPaystackResponse.requested_amount,
+          gatewayResponse: dataFromPaystackResponse.gateway_response,
+          posTransactionData: dataFromPaystackResponse.pos_transaction_data,
+          paidAt: dataFromPaystackResponse.paid_at,
+          customer: dataFromPaystackResponse.customer,
+          authorization: dataFromPaystackResponse.authorization,
+          fees: dataFromPaystackResponse.fees,
+          log: dataFromPaystackResponse.log,
+          channel: dataFromPaystackResponse.channel,
+          status: dataFromPaystackResponse.status,
+          domain: dataFromPaystackResponse.domain,
+          createdAt: dataFromPaystackResponse.created_at,
+          currency: dataFromPaystackResponse.currency,
+          ipAddress: dataFromPaystackResponse.ip_address,
+        },
       });
 
       if (!paystackResponse) {
@@ -80,13 +108,17 @@ class PaymentService {
           reference,
         },
         data: {
-          paidAt: dataFromPaystackResponse?.paidAt,
-          status: dataFromPaystackResponse?.status,
-          paymentMethod: dataFromPaystackResponse?.channel,
+          paidAt: dataFromPaystackResponse.paid_at,
+          status: dataFromPaystackResponse.status,
+          paymentMethod: dataFromPaystackResponse.channel,
+          paystackId: BigInt(dataFromPaystackResponse.id),
         },
       });
 
-      return updatedPayment;
+      return {
+        ...updatedPayment,
+        paystackId: Number(updatedPayment.paystackId),
+      };
     } catch (error) {
       throw new Error(
         error instanceof Error ? error.message : "Unable to verify payment"
@@ -127,7 +159,13 @@ class PaymentService {
 
     const fetchedPaymentDetails = await this.prisma.payment.findMany({});
 
-    return fetchedPaymentDetails;
+    // Convert BigInt fields to string
+    const serialized = fetchedPaymentDetails.map((payment) => ({
+      ...payment,
+      paystackId: Number(payment.paystackId!), // Convert BigInt to string
+    }));
+
+    return serialized;
   };
 
   public fetchPaymentByUserId = async (userId: string, filters?: any) => {
