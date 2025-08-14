@@ -8,6 +8,7 @@ import ProductRouter from "@/modules/products/product.routes";
 import UserRouter from "@/modules/users/user.routes";
 import CartRouter from "./modules/cart/cart.routes";
 import OrderRouter from "./modules/orders/order.routes";
+import PaymentRouter from "./modules/payment/payment.routes";
 
 try {
   validateEnv();
@@ -21,7 +22,8 @@ try {
       new AuthRouter(),
       new CartRouter(),
       new OrderRouter(),
-    ], // Your route controllers will go here
+      new PaymentRouter(),
+    ],
     port
   );
 
