@@ -72,3 +72,5 @@ class PaymentRouter implements RouteController {
     );
   }
 }
+
+export default PaymentRouter;
