@@ -7,7 +7,7 @@ export interface InitialisePaymentProps {
   plan?: string;
   invoice_limit?: string;
   split_code?: string;
-  channels: [
+  channels?: [
     "card",
     "bank",
     "apple_pay",

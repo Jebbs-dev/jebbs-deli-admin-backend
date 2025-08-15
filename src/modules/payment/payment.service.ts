@@ -49,7 +49,7 @@ class PaymentService {
 
       return {
         payment: createdPayment,
-        redirectUrl: authorization_url,
+        authorization_url,
         access_code,
       };
     } catch (error) {
