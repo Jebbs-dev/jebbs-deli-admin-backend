@@ -1,90 +1,74 @@
-import { NextFunction, Request, Response } from 'express';
-import CartService from './cart.service';
-import HttpException from '@/utils/exceptions/http.exception';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Req,
+} from '@nestjs/common';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { ZodResponse } from 'nestjs-zod';
 
-class CartController {
-  private cartService = new CartService();
+import { AddToCartDto, UpdateCartBodyDto } from './dto/cart-item.dto';
+import { CreateCartCommand } from './command/create-cart';
+import { UpdateCartCommand } from './command/update-cart';
+import { DeleteCartCommand } from './command/delete-cart';
+import { GetCartQuery } from './query/get-cart';
+import { RecordResponseDto } from '@libs/shared/system/common/schemas/response.schemas';
 
-  public addToCart = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const authenticatedUserId = req.user?.id; // Get user ID from auth middleware
-      const sessionId = req.session.cartId; // Get session ID for guest carts
-      
-      // Get data from request body
-      const { cartItems, totalPrice, userId: bodyUserId } = req.body;
-      
-      // Use authenticated user ID if available, otherwise use the ID from the request body
-      const userId = authenticatedUserId || bodyUserId;
+@Controller('cart')
+export class CartController {
+  constructor(
+    private readonly commandBus: CommandBus,
+    private readonly queryBus: QueryBus,
+  ) {}
 
-      // Make sure all cart items have a storeId
-      if (cartItems && cartItems.length > 0) {
-        for (const item of cartItems) {
-          if (!item.storeId) {
-            throw new Error('Each cart item must have a storeId');
-          }
-        }
-      }
-
-      // Prepare cart data with proper structure
-      const cartData = {
-        userId,
-        sessionId: userId ? undefined : sessionId, // Only use sessionId if no userId
-        totalPrice,
-        cartItems
-      };
-
-      const cart = await this.cartService.addCartData(cartData);
-      res.status(201).json(cart);
-    } catch (error) {
-      next(new HttpException(500, error ? (error as Error).message : "Failed to add to cart"));
-    }
+  @Post()
+  @ZodResponse({
+    status: 201,
+    description: 'Adds items to the cart and returns the created cart',
+    type: RecordResponseDto,
+  })
+  async addToCart(@Body() dto: AddToCartDto, @Req() req: { user?: { id?: string }; session?: { cartId?: string } }) {
+    return this.commandBus.execute(
+      new CreateCartCommand(
+        req.user?.id || null,
+        dto.userId ? null : req.session?.cartId || null,
+        dto.cartItems,
+        dto.totalPrice,
+      ),
+    );
   }
 
-  public getCart = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { userId } = req.params; // Get the userId from URL params
-      
-      if (!userId) {
-        throw new Error('User ID is required');
-      }
-      
-      const cart = await this.cartService.fetchCartData(userId);
-      res.status(200).json(cart);
-    } catch (error) {
-      next(new HttpException(500, error ? (error as Error).message : "Failed to fetch cart"));
-    }
+  @Get(':userId')
+  @ZodResponse({
+    status: 200,
+    description: 'Returns the cart for the specified user',
+    type: RecordResponseDto,
+  })
+  async getCart(@Param('userId') userId: string) {
+    return this.queryBus.execute(new GetCartQuery(userId));
   }
 
-  public updateCart = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { id } = req.params; // Get cart ID from URL params
-      const { cartData, cartItems } = req.body;
-
-      // Make sure all cart items have a storeId
-      if (cartItems && cartItems.length > 0) {
-        for (const item of cartItems) {
-          if (!item.storeId) {
-            throw new Error('Each cart item must have a storeId');
-          }
-        }
-      }
-
-      const updatedCart = await this.cartService.updateCartData(id, cartData, cartItems);
-      res.status(200).json(updatedCart);
-    } catch (error) {
-      next(new HttpException(500, error ? (error as Error).message : "Failed to update cart"));
-    }
+  @Put(':id')
+  @ZodResponse({
+    status: 200,
+    description: 'Updates the cart and returns the updated cart',
+    type: RecordResponseDto,
+  })
+  async updateCart(@Param('id') id: string, @Body() body: UpdateCartBodyDto) {
+    return this.commandBus.execute(new UpdateCartCommand(id, body.cartData, body.cartItems));
   }
 
-  public deleteCart = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { id } = req.params; // Get cart ID from URL params
-      const result = await this.cartService.deleteCartData(id);
-      res.status(200).json(result);
-    } catch (error) {
-      next(new HttpException(500, error ? (error as Error).message : "Failed to delete cart"));
-    }
+  @Delete(':id')
+  @ZodResponse({
+    status: 200,
+    description: 'Deletes the cart and returns the deleted cart',
+    type: RecordResponseDto,
+  })
+  async deleteCart(@Param('id') id: string) {
+    return this.commandBus.execute(new DeleteCartCommand(id));
   }
 }
-
-export default CartController;

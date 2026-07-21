@@ -1,10 +1,11 @@
 generator client {
-  provider = "prisma-client-js"
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum Role {
@@ -48,8 +49,15 @@ enum PaymentStatus {
   queued
 }
 
+enum WalletTxType {
+  topup
+  order_payment
+  refund
+  adjustment
+}
+
 model User {
-  id        String   @id @default(uuid())
+  id        String   @id @default(uuid(7))
   name      String?
   email     String   @unique
   password  String
@@ -63,15 +71,17 @@ model User {
   cart     Cart?
   orders   Order[]
   payments Payment[]
-  Token    Token[]
+  tokens   Token[]
   store    Store?
+  wallet   Wallet?
 
   @@map("users")
 }
 
 model Store {
-  id     String  @id @default(uuid())
+  id     String  @id @default(uuid(7))
   name   String
+  slug   String? @unique
   userId String? @unique
 
   email           String
@@ -82,48 +92,53 @@ model Store {
   preparationTime String?
   openingTime     String?
   closingTime     String?
-  rating          Float?
+  rating          Decimal? @db.Decimal(3, 2)
   totalReviews    Int?
-  deliveryFee     Float   @default(0)
+  deliveryFee     Decimal  @default(0) @db.Decimal(12, 2)
 
   tags      String[]
-  isActive  Boolean   @default(true)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime? @updatedAt
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  admin          User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  products       Product[]        @relation("StoreToProduct")
-  orders         Order[]          @relation("StoreToOrder")
-  payments       Payment[]        @relation("StoreToPayment")
-  CartStoreGroup CartStoreGroup[]
-  OrderItem      OrderItem[]
+  admin           User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products        Product[]        @relation("StoreToProduct")
+  orders          Order[]          @relation("StoreToOrder")
+  payments        Payment[]        @relation("StoreToPayment")
+  cartStoreGroups CartStoreGroup[]
+  orderItems      OrderItem[]
 
   @@map("stores")
 }
 
 model Address {
-  id          String   @id @default(uuid())
+  id          String   @id @default(uuid(7))
   description String
-  place_id    String
+  placeId     String
   reference   String
   types       String[]
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("addresses")
 }
 
 model Cart {
-  id         String   @id @default(uuid())
+  id         String   @id @default(uuid(7))
   userId     String?  @unique
   sessionId  String?  @unique
-  totalPrice Float
+  totalPrice Decimal  @default(0) @db.Decimal(12, 2)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   cartGroups CartStoreGroup[]
   user       User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("carts")
 }
 
 model CartStoreGroup {
-  id        String   @id @default(uuid())
+  id        String   @id @default(uuid(7))
   cartId    String
   storeId   String
   createdAt DateTime @default(now())
@@ -132,95 +147,129 @@ model CartStoreGroup {
   cart      Cart       @relation(fields: [cartId], references: [id], onDelete: Cascade)
   store     Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
   cartItems CartItem[]
+
+  @@index([cartId])
+  @@index([storeId])
+  @@map("cart_store_groups")
 }
 
 model CartItem {
-  id               String @id @default(uuid())
+  id               String   @id @default(uuid(7))
   cartStoreGroupId String
   productId        String
   quantity         Int
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   cartStoreGroup CartStoreGroup @relation(fields: [cartStoreGroupId], references: [id], onDelete: Cascade)
   product        Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([cartStoreGroupId, productId])
+  @@index([productId])
+  @@map("cart_items")
 }
 
 model Product {
-  id          String     @id @default(uuid())
+  id          String     @id @default(uuid(7))
   name        String
   description String
-  price       Float
+  price       Decimal    @db.Decimal(12, 2)
   image       String
   stock       Int?
   category    Category   @default(meal)
   storeId     String
   discountId  String?
   storeTag    String?
-  // size        Size?    @relation(fields: [sizeId], references: [id])
   size        SizeValue?
-  isAvailable Boolean
-  isFeatured  Boolean
+  isAvailable Boolean    @default(true)
+  isFeatured  Boolean    @default(false)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
   discount Discount? @relation(fields: [discountId], references: [id], onDelete: SetNull)
-
-  store Store @relation("StoreToProduct", fields: [storeId], references: [id], onDelete: Cascade)
+  store    Store     @relation("StoreToProduct", fields: [storeId], references: [id], onDelete: Cascade)
 
   cartItems  CartItem[]
   orderItems OrderItem[]
 
+  @@index([storeId])
+  @@index([discountId])
+  @@index([category])
+  @@index([isFeatured])
   @@map("products")
 }
 
 model Discount {
-  id              String   @id @default(uuid())
-  code            String   @unique
-  discountPercent Float
-  isActive        Boolean
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                String    @id @default(uuid(7))
+  code              String    @unique
+  discountPercent   Decimal   @db.Decimal(5, 2)
+  isActive          Boolean   @default(true)
+  validFrom         DateTime?
+  validUntil        DateTime?
+  maxUses           Int?
+  usedCount         Int       @default(0)
+  minOrderAmount    Decimal?  @db.Decimal(12, 2)
+  maxDiscountAmount Decimal?  @db.Decimal(12, 2)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   products Product[]
+
+  @@map("discounts")
 }
 
 model Order {
-  id              String      @id @default(uuid())
+  id              String      @id @default(uuid(7))
   userId          String
   storeId         String
-  serviceFee      Float
-  deliveryFee     Float
-  subTotal        Float
-  totalPrice      Float
+  serviceFee      Decimal     @db.Decimal(12, 2)
+  deliveryFee     Decimal     @db.Decimal(12, 2)
+  subTotal        Decimal     @db.Decimal(12, 2)
+  totalPrice      Decimal     @db.Decimal(12, 2)
   vendorAddress   String
   customerAddress String
   status          OrderStatus @default(pending)
   createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
 
-  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  payment Payment?
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payment            Payment?
+  walletTransactions WalletTransaction[]
 
   orderItems OrderItem[]
-  store      Store       @relation("StoreToOrder", fields: [storeId], references: [id])
+  store      Store       @relation("StoreToOrder", fields: [storeId], references: [id], onDelete: Restrict)
 
+  @@index([userId])
+  @@index([storeId])
+  @@index([status])
+  @@index([createdAt])
   @@map("orders")
 }
 
 model OrderItem {
-  id        String @id @default(uuid())
-  storeId   String
-  orderId   String
-  productId String
-  quantity  Int
+  id          String   @id @default(uuid(7))
+  storeId     String
+  orderId     String
+  productId   String
+  productName String
+  unitPrice   Decimal  @db.Decimal(12, 2)
+  quantity    Int
+  createdAt   DateTime @default(now())
 
-  store   Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  store   Store   @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
-  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  @@index([orderId])
+  @@index([productId])
+  @@index([storeId])
+  @@map("order_items")
 }
 
 model PaystackTransaction {
-  id        BigInt? @unique
-  paymentId String  @unique
+  id         String  @id @default(uuid(7))
+  paystackId BigInt? @unique
+  paymentId  String  @unique
 
   reference     String  @unique
   receiptNumber String?
@@ -229,6 +278,7 @@ model PaystackTransaction {
   accessCode String?
 
   currency String @default("NGN")
+  /// Amount in kobo (Paystack minor units)
   amount   Int
 
   plan               Json?
@@ -259,25 +309,25 @@ model PaystackTransaction {
   webhookReceivedAt DateTime?
 
   createdAt DateTime  @default(now())
-  paidAt    DateTime? // When paid on Paystack
+  paidAt    DateTime?
 
-  payment Payment?
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
 
-  @@index([id])
-  @@index([reference])
   @@index([accessCode])
   @@index([status])
   @@index([webhookVerified])
+  @@map("paystack_transactions")
 }
 
-// Main Payment schema - clean business logic
 model Payment {
-  id            String        @id @default(uuid())
+  id            String        @id @default(uuid(7))
   userId        String
   orderId       String        @unique
   storeId       String
+  /// Gateway transaction id from Paystack (not a relation FK)
   paystackId    BigInt?       @unique
-  amount        Float
+  /// Amount in major units (naira)
+  amount        Decimal       @db.Decimal(12, 2)
   reference     String        @unique
   status        PaymentStatus @default(pending)
   paymentMethod String?
@@ -287,24 +337,78 @@ model Payment {
   updatedAt     DateTime      @updatedAt
   paidAt        DateTime?
 
-  // Relationships
-  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  order               Order?               @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  store               Store                @relation("StoreToPayment", fields: [storeId], references: [id])
-  paystackTransaction PaystackTransaction? @relation(fields: [paystackId], references: [id])
+  user                User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order               Order                 @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  store               Store                 @relation("StoreToPayment", fields: [storeId], references: [id], onDelete: Restrict)
+  paystackTransaction PaystackTransaction?
+  walletTransaction   WalletTransaction?
 
   @@index([userId])
   @@index([storeId])
   @@index([status])
   @@index([createdAt])
+  @@map("payments")
+}
+
+model Wallet {
+  id        String   @id @default(uuid(7))
+  userId    String   @unique
+  balance   Decimal  @default(0) @db.Decimal(12, 2)
+  currency  String   @default("NGN")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions WalletTransaction[]
+
+  @@map("wallets")
+}
+
+model WalletTransaction {
+  id           String        @id @default(uuid(7))
+  walletId     String
+  type         WalletTxType
+  /// Signed major units: + credit, - debit
+  amount       Decimal       @db.Decimal(12, 2)
+  balanceAfter Decimal       @db.Decimal(12, 2)
+  status       PaymentStatus @default(pending)
+  reference    String        @unique
+  orderId      String?
+  paymentId    String?       @unique
+  description  String?
+  metadata     Json?
+  createdAt    DateTime      @default(now())
+
+  wallet  Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  order   Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  payment Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  @@index([walletId, createdAt])
+  @@index([orderId])
+  @@map("wallet_transactions")
+}
+
+model WebhookEvent {
+  id              String   @id @default(uuid(7))
+  paystackEventId String   @unique @map("paystack_event_id")
+  event           String
+  payload         Json
+  processedAt     DateTime @default(now()) @map("processed_at")
+
+  @@index([paystackEventId])
+  @@map("webhook_events")
 }
 
 model Token {
-  id        String   @id @default(uuid())
+  id        String   @id @default(uuid(7))
   userId    String
   token     String   @unique
-  expiresIn Int
+  expiresAt DateTime
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("tokens")
 }

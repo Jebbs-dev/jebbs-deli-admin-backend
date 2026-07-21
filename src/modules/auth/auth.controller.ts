@@ -1,239 +1,72 @@
-import { Request, Response, NextFunction } from "express";
-import HttpException from "@/utils/exceptions/http.exception";
-import AuthService from "./auth.service";
-import prisma from "@/utils/prisma";
+import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { CommandBus } from '@nestjs/cqrs';
+import { ZodResponse } from 'nestjs-zod';
+import { LoginCommand } from './command/login';
+import { LoginAdminCommand } from './command/login-admin';
+import { LoginVendorCommand } from './command/login-vendor';
+import { RefreshTokenCommand } from './command/refresh-token';
+import { LogoutCommand } from './command/logout';
+import { LoginDto } from './dto/login.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { CurrentUser } from '@libs/shared/features/auth/decorators/current-user.decorator';
+import { Public } from '@libs/shared/features/auth/decorators/public.decorator';
+import { AuthTokensResponseDto } from '@libs/shared/system/common/schemas/response.schemas';
 
-class AuthController {
-  private authService = new AuthService();
-  private prisma = prisma;
+@Controller('auth')
+export class AuthController {
+  constructor(private readonly commandBus: CommandBus) {}
 
-  /**
-   * User login
-   */
-  public login = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> => {
-    try {
-      const { email, password } = req.body;
+  @Public()
+  @Post('login')
+  @ZodResponse({
+    status: 200,
+    description: 'Returns access and refresh tokens for a customer login',
+    type: AuthTokensResponseDto,
+  })
+  async login(@Body() dto: LoginDto) {
+    return this.commandBus.execute(new LoginCommand(dto.email, dto.password));
+  }
 
-      if (!email || !password) {
-        throw new HttpException(400, "Email and password are required");
-      }
-      const tokens = await this.authService.login(email, password);
+  @Public()
+  @Post('admin/login')
+  @ZodResponse({
+    status: 200,
+    description: 'Returns access and refresh tokens for an admin login',
+    type: AuthTokensResponseDto,
+  })
+  async adminLogin(@Body() dto: LoginDto) {
+    return this.commandBus.execute(
+      new LoginAdminCommand(dto.email, dto.password),
+    );
+  }
 
-      const user = await this.prisma.user.findUnique({
-        where: { email },
-        select: {
-          role: true,
-        },
-      });
+  @Public()
+  @Post('vendor/login')
+  @ZodResponse({
+    status: 200,
+    description: 'Returns access and refresh tokens for a vendor login',
+    type: AuthTokensResponseDto,
+  })
+  async vendorLogin(@Body() dto: LoginDto) {
+    return this.commandBus.execute(
+      new LoginVendorCommand(dto.email, dto.password),
+    );
+  }
 
-      if (!user) {
-        throw new Error("User not found");
-      }
+  @Public()
+  @Post('refresh')
+  @ZodResponse({
+    status: 200,
+    description: 'Returns a new access and refresh token pair',
+    type: AuthTokensResponseDto,
+  })
+  async refresh(@Body() dto: RefreshTokenDto) {
+    return this.commandBus.execute(new RefreshTokenCommand(dto.refreshToken));
+  }
 
-      const isVendor = user.role === "VENDOR";
-
-      const userData = await this.prisma.user.findUnique({
-        where: { email },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          role: true,
-          ...(isVendor && { store: true }),
-        },
-      });
-
-      if (userData) {
-        if (userData.role === "USER" && req.session.cartId) {
-          const guestCart = await prisma.cart.findUnique({
-            where: { sessionId: req.session.cartId },
-            include: { cartGroups: true },
-          });
-
-          if (guestCart) {
-            await prisma.cart.update({
-              where: { id: guestCart.id },
-              data: { userId: userData.id, sessionId: null },
-            });
-          }
-        }
-
-        req.session.userId = userData.id;
-      }
-
-      const userInfo = {
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-        user: userData,
-      };
-
-      res.status(200).json(userInfo);
-    } catch (error) {
-      next(
-        new HttpException(
-          500,
-          error ? (error as Error).message : "Unable to login user"
-        )
-      );
-    }
-  };
-
-  public adminLogin = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
-    try {
-      const { email, password } = req.body;
-
-      if (!email || !password) {
-        throw new HttpException(400, "Email and password are required");
-      }
-      const tokens = await this.authService.adminLogin(email, password);
-
-      const userData = await this.prisma.user.findUnique({
-        where: { email },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          role: true,
-        },
-      });
-
-      const userInfo = {
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-        user: userData,
-      };
-
-      res.status(200).json(userInfo);
-    } catch (error) {
-      next(
-        new HttpException(
-          500,
-          error ? (error as Error).message : "Unable to login vendor"
-        )
-      );
-    }
-  };
-
-  public vendorLogin = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
-    try {
-      const { email, password } = req.body;
-
-      if (!email || !password) {
-        throw new HttpException(400, "Email and password are required");
-      }
-      const tokens = await this.authService.vendorLogin(email, password);
-
-      const userData = await this.prisma.user.findUnique({
-        where: { email },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          role: true,
-          store: true,
-        },
-      });
-
-      const userInfo = {
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-        user: userData,
-      };
-
-      res.status(200).json(userInfo);
-    } catch (error) {
-      next(
-        new HttpException(
-          500,
-          error ? (error as Error).message : "Unable to login vendor"
-        )
-      );
-    }
-  };
-
-  /**
-   * User logout
-   */
-  public logout = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<any> => {
-    if (!req.user) {
-      return res.sendStatus(401);
-    }
-    // Logic for logging out the user (e.g., invalidating tokens) can be added here
-    res.sendStatus(204); // Send a 204 No Content status for successful logout
-  };
-
-  /**
-   * Refresh access token using refresh token
-   */
-  // public refresh = async (req: Request, res: Response, next: NextFunction) => {
-  //   const { refreshToken } = req.body;
-
-  //   if (!refreshToken) {
-  //     return next(new HttpException(401, "No refresh token provided"));
-  //   }
-
-  //   try {
-  //     const tokens = await this.authService.refresh(refreshToken);
-
-  //     res.status(200).json({
-  //       accessToken: tokens.accessToken,
-  //       refreshToken: tokens.refreshToken
-  //     });
-  //   } catch (error) {
-  //     next(
-  //       new HttpException(
-  //         403,
-  //         error instanceof Error ? error.message : "Invalid or expired refresh token"
-  //       )
-  //     );
-  //   }
-  // };
-
-  public refresh = async (req: Request, res: Response, next: NextFunction) => {
-    // console.log("Refresh token request received:", req.body); // Debugging
-    const { refreshToken } = req.body;
-
-    if (!refreshToken) {
-      console.log("No refresh token provided");
-      return next(new HttpException(401, "No refresh token provided"));
-    }
-
-    try {
-      const tokens = await this.authService.refresh(refreshToken);
-      // console.log("New tokens generated:", tokens); // Debugging
-
-      res.status(200).json({
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-      });
-    } catch (error) {
-      // console.error("Error refreshing token:", error); // Debugging
-      next(
-        new HttpException(
-          403,
-          error instanceof Error
-            ? error.message
-            : "Invalid or expired refresh token"
-        )
-      );
-    }
-  };
+  @Post('logout')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async logout(@CurrentUser('id') userId: string) {
+    await this.commandBus.execute(new LogoutCommand(userId));
+  }
 }
-
-export default AuthController;

@@ -3,4 +3,8 @@ node_modules
 .env
 dist
 
+src/generated
+
 .DS_STORE
+
+.pnpm-store

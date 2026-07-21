@@ -1,289 +1,130 @@
-import PaymentService from "./payment.service";
-import { Request, Response, NextFunction } from "express";
-import HttpException from "@/utils/exceptions/http.exception";
-import prisma from "@/utils/prisma";
-import crypto from "crypto";
-import { secretKey } from "@/utils/payment";
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+} from '@nestjs/common';
+import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { ZodResponse } from 'nestjs-zod';
 
-class PaymentController {
-  private paymentService = new PaymentService();
-  private prisma = prisma;
+import { Roles } from '@libs/shared/features/auth/decorators/roles.decorator';
+import { InitializePaymentDto } from './dto/initialize-payment.dto';
+import { InitializePaymentCommand } from './command/initialize-payment';
+import { VerifyPaymentCommand } from './command/verify-payment';
+import { AdminVerifyPaymentCommand } from './command/admin-verify-payment';
+import { GetPaymentByIdQuery } from './query/get-payment-by-id';
+import { GetPaymentsQuery } from './query/get-payments';
+import { GetPaymentsByUserQuery } from './query/get-payments-by-user';
+import { GetPaymentsByStoreQuery } from './query/get-payments-by-store';
+import { GetPaymentsByOrderQuery } from './query/get-payments-by-order';
+import { paginationQuerySchema } from '@libs/shared/system/common/dto/pagination.dto';
+import { createZodDto } from 'nestjs-zod';
+import {
+  PaginatedPaymentsResponseDto,
+  PaymentInitResponseDto,
+  RecordArrayResponseDto,
+  RecordResponseDto,
+  UnknownRecordResponseDto,
+} from '@libs/shared/system/common/schemas/response.schemas';
 
-  public initilisePayment = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> => {
-    try {
-      const { paymentData, userId, storeId, orderId } = req.body;
+class PaymentQueryDto extends createZodDto(paginationQuerySchema) {}
 
-      const payment = await this.paymentService.initialisePayment(
-        paymentData,
-        userId,
-        storeId,
-        orderId
-      );
+@Controller('payment')
+export class PaymentController {
+  constructor(
+    private readonly commandBus: CommandBus,
+    private readonly queryBus: QueryBus,
+  ) {}
 
-      res.status(201).json({ payment });
-    } catch (error) {
-      next(
-        new HttpException(
-          500,
-          error ? (error as Error).message : "Failed to initialise payment"
-        )
-      );
-    }
-  };
+  @Post('initialise')
+  @ZodResponse({
+    status: 201,
+    description: 'Initialises a Paystack payment and returns authorization details',
+    type: PaymentInitResponseDto,
+  })
+  async initialize(@Body() body: InitializePaymentDto) {
+    const { paymentData, userId, storeId, orderId } = body;
+    return this.commandBus.execute(
+      new InitializePaymentCommand(paymentData, userId, storeId, orderId),
+    );
+  }
 
-  public verifyPayment = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> => {
-    try {
-      const { reference } = req.params;
+  @Get('verify/:reference')
+  @ZodResponse({
+    status: 200,
+    description: 'Verifies a payment by Paystack reference',
+    type: UnknownRecordResponseDto,
+  })
+  async verify(@Param('reference') reference: string) {
+    return this.commandBus.execute(new VerifyPaymentCommand(reference));
+  }
 
-      const payment = await this.paymentService.verifyPayment(reference);
+  @Roles('ADMIN')
+  @Get('admin/verify/:reference')
+  @ZodResponse({
+    status: 200,
+    description: 'Admin verification of a payment by Paystack reference',
+    type: UnknownRecordResponseDto,
+  })
+  async adminVerify(@Param('reference') reference: string) {
+    return this.commandBus.execute(new AdminVerifyPaymentCommand(reference));
+  }
 
-      res.status(200).send(payment);
-    } catch (error) {
-      next(
-        new HttpException(
-          500,
-          error ? (error as Error).message : "Failed to verify payment"
-        )
-      );
-    }
-  };
+  @Get()
+  @ZodResponse({
+    status: 200,
+    description: 'Returns all payments',
+    type: RecordArrayResponseDto,
+  })
+  async findAll() {
+    return this.queryBus.execute(new GetPaymentsQuery());
+  }
 
-  public adminVerifyPayment = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> => {
-    try {
-      const { reference } = req.params;
+  @Get('store/:storeId')
+  @ZodResponse({
+    status: 200,
+    description: 'Returns paginated payments for a specific store',
+    type: PaginatedPaymentsResponseDto,
+  })
+  async findByStore(
+    @Param('storeId') storeId: string,
+    @Query() filters: PaymentQueryDto,
+  ) {
+    return this.queryBus.execute(new GetPaymentsByStoreQuery(storeId, filters));
+  }
 
-      const payment = await this.paymentService.adminVerifyTransaction(
-        reference
-      );
+  @Get('user/:userId')
+  @ZodResponse({
+    status: 200,
+    description: 'Returns paginated payments for a specific user',
+    type: PaginatedPaymentsResponseDto,
+  })
+  async findByUser(
+    @Param('userId') userId: string,
+    @Query() filters: PaymentQueryDto,
+  ) {
+    return this.queryBus.execute(new GetPaymentsByUserQuery(userId, filters));
+  }
 
-      res.status(200).send(payment);
-    } catch (error) {
-      next(
-        new HttpException(
-          500,
-          error ? (error as Error).message : "Failed to verify payment"
-        )
-      );
-    }
-  };
+  @Get('order/:orderId')
+  @ZodResponse({
+    status: 200,
+    description: 'Returns all payments for a specific order',
+    type: RecordArrayResponseDto,
+  })
+  async findByOrder(@Param('orderId') orderId: string) {
+    return this.queryBus.execute(new GetPaymentsByOrderQuery(orderId));
+  }
 
-  public fetchPayment = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> => {
-    try {
-      const paymentDetails = await this.paymentService.fetchPayments();
-
-      res.status(200).send(paymentDetails);
-    } catch (error) {
-      next(
-        new HttpException(
-          500,
-          error ? (error as Error).message : "Failed to fetch payment details"
-        )
-      );
-    }
-  };
-
-  public fetchPaymentByUserId = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> => {
-    try {
-      const { userId } = req.params;
-      const query = req.query;
-
-      const paymentDetails = await this.paymentService.fetchPaymentByUserId(
-        userId,
-        query
-      );
-
-      res.status(200).send(paymentDetails);
-    } catch (error) {
-      next(
-        new HttpException(
-          500,
-          error ? (error as Error).message : "Failed to fetch payment details"
-        )
-      );
-    }
-  };
-
-  public fetchPaymentByStoreId = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> => {
-    try {
-      const { storeId } = req.params;
-      const query = req.query;
-
-      const paymentDetails = await this.paymentService.fetchPaymentByStoreId(
-        storeId,
-        query
-      );
-
-      res.status(200).send(paymentDetails);
-    } catch (error) {
-      next(
-        new HttpException(
-          500,
-          error ? (error as Error).message : "Failed to fetch payment details"
-        )
-      );
-    }
-  };
-
-  public fetchPaymentByOrderId = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> => {
-    try {
-      const { orderId } = req.params;
-
-      const paymentDetails = await this.paymentService.fetchPaymentByOrderId(
-        orderId
-      );
-
-      res.status(200).send(paymentDetails);
-    } catch (error) {
-      next(
-        new HttpException(
-          500,
-          error ? (error as Error).message : "Failed to fetch payment details"
-        )
-      );
-    }
-  };
-
-  public fetchPaymentById = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> => {
-    try {
-      const { id } = req.params;
-
-      const paymentDetails = await this.paymentService.fetchPaymentById(id);
-
-      res.status(200).send(paymentDetails);
-    } catch (error) {
-      next(
-        new HttpException(
-          500,
-          error ? (error as Error).message : "Failed to fetch payment details"
-        )
-      );
-    }
-  };
-
-  public paystackWebhookHandler = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> => {
-    const hash = crypto
-      .createHmac("sha512", secretKey || "")
-      .update(JSON.stringify(req.body))
-      .digest("hex");
-
-    const signature = req.headers["x-paystack-signature"];
-
-    // 🛡️ Verify webhook signature
-    if (hash !== signature) {
-      res.status(401).json({ error: "Unauthorized: Invalid signature" });
-      return;
-    }
-
-    const event = req.body;
-
-    try {
-      const { event: eventType, data } = event;
-
-      if (eventType === "charge.success") {
-        const reference = data.reference;
-
-        const existingTransaction = await prisma.paystackTransaction.findUnique(
-          {
-            where: { reference },
-          }
-        );
-
-        if (!existingTransaction) {
-          console.error(
-            "No matching transaction found for reference:",
-            reference
-          );
-          res.status(404).json({ error: "Transaction not found" });
-          return;
-        }
-
-        // Update the transaction and linked payment
-        await prisma.paystackTransaction.update({
-          where: { reference },
-          data: {
-            ...data,
-            webhookVerified: true,
-            webhookSignature: signature as string,
-            webhookReceivedAt: new Date(),
-          },
-        });
-
-        await prisma.payment.update({
-          where: {
-            id: existingTransaction.paymentId,
-          },
-          data: {
-            paidAt: new Date(data.paid_at),
-            paymentMethod: data.channel,
-            description: data.message,
-          },
-        });
-
-        res.status(200).json({ status: "success" });
-        return;
-      }
-
-      // Handle failed payments
-      if (eventType === "charge.failed") {
-        res.status(404).json({ error: "Transaction failed. Try again" });
-        return;
-      }
-
-      // Other event types you may want to handle:
-      // - transfer.success
-      // - transfer.failed
-      // - subscription.create
-      // - invoice.payment_failed
-
-      res.status(200).json({ received: true });
-      return;
-    } catch (error) {
-      next(
-        new HttpException(
-          500,
-          error ? (error as Error).message : "Internal Server Error"
-        )
-      );
-      console.error("Webhook handling error:", error);
-      return;
-    }
-  };
+  @Get(':id')
+  @ZodResponse({
+    status: 200,
+    description: 'Returns a payment by ID',
+    type: RecordResponseDto,
+  })
+  async findById(@Param('id') id: string) {
+    return this.queryBus.execute(new GetPaymentByIdQuery(id));
+  }
 }
-
-export default PaymentController;
