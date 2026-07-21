@@ -1,5 +1,5 @@
-# Railway uses Nixpacks. Corepack's pnpm shim fails on Node 18 with:
-# ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING
+# Fallback if not using Dockerfile. Prefer railway.toml + Dockerfile on Railway.
+# Corepack's pnpm shim fails on Node 18 with ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING.
 providers = ["node"]
 
 [variables]

@@ -1,4 +1,4 @@
-# pnpm config only (not a multi-package workspace).
+# pnpm project config (required in pnpm 11+; not a multi-package workspace).
 # Shared code lives in libs/ via TypeScript path aliases.
 packages:
   - '.'
