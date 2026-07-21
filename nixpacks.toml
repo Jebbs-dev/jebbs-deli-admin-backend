@@ -1,0 +1,15 @@
+# Railway uses Nixpacks. Corepack's pnpm shim fails on Node 18 with:
+# ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING
+providers = ["node"]
+
+[variables]
+NIXPACKS_NODE_VERSION = "22"
+
+[phases.install]
+cmds = [
+  "npm install -g pnpm@11.5.0",
+  "pnpm install --frozen-lockfile",
+]
+
+[phases.build]
+cmds = ["pnpm run build"]
