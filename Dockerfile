@@ -8,15 +8,14 @@ WORKDIR /app
 
 FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-# Prisma reads DATABASE_URL during `prisma generate` (postinstall); no DB connection at build.
-ENV DATABASE_URL="postgresql://build:build@127.0.0.1:5432/build?schema=public"
-RUN pnpm install --frozen-lockfile
+# Schema is not copied yet; skip postinstall (prisma generate) until the build stage.
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 FROM base AS build
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV DATABASE_URL="postgresql://build:build@127.0.0.1:5432/build?schema=public"
-RUN pnpm run build
+RUN pnpm exec prisma generate && pnpm run build
 
 FROM base AS runner
 WORKDIR /app
