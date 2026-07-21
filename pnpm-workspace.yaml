@@ -1,5 +1,8 @@
 # pnpm config only (not a multi-package workspace).
 # Shared code lives in libs/ via TypeScript path aliases.
+packages:
+  - '.'
+
 allowBuilds:
   '@nestjs/core': true
   '@prisma/client': true
