@@ -68,13 +68,23 @@ export class PaystackWebhookService {
       return;
     }
 
-    await this.prisma.webhookEvent.create({
-      data: {
-        paystackEventId,
-        event: payload.event,
-        payload: payload as object,
-      },
-    });
+    // Reserve the event id first so concurrent deliveries are ignored, but
+    // delete the reservation if processing fails so Paystack can retry.
+    try {
+      await this.prisma.webhookEvent.create({
+        data: {
+          paystackEventId,
+          event: payload.event,
+          payload: payload as object,
+        },
+      });
+    } catch (err: unknown) {
+      // Unique violation = another worker already claimed this event.
+      this.logger.debug(
+        `Webhook claim race ignored: ${paystackEventId} (${err instanceof Error ? err.message : String(err)})`,
+      );
+      return;
+    }
 
     try {
       switch (payload.event) {
@@ -88,6 +98,13 @@ export class PaystackWebhookService {
       this.logger.error(
         `Paystack webhook handler error: ${err instanceof Error ? err.message : String(err)}`,
       );
+      await this.prisma.webhookEvent
+        .delete({ where: { paystackEventId } })
+        .catch((deleteErr: unknown) => {
+          this.logger.warn(
+            `Failed to release webhook claim ${paystackEventId}: ${deleteErr instanceof Error ? deleteErr.message : String(deleteErr)}`,
+          );
+        });
       throw err;
     }
   }

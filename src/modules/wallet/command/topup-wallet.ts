@@ -1,5 +1,9 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpException,
+  NotFoundException,
+} from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { Prisma } from '@generated/prisma/client';
 import { PaymentStatus, WalletTxType } from '@generated/prisma/enums';
@@ -70,7 +74,7 @@ export class TopupWalletHandler implements ICommandHandler<TopupWalletCommand> {
         },
       });
 
-      await this.prisma.walletTransaction.update({
+      const updatedLedger = await this.prisma.walletTransaction.update({
         where: { id: ledger.id },
         data: {
           metadata: {
@@ -89,16 +93,38 @@ export class TopupWalletHandler implements ICommandHandler<TopupWalletCommand> {
         currency: wallet.currency,
         authorization_url: paystackResponse.authorization_url,
         access_code: paystackResponse.access_code,
-        transaction: ledger,
+        transaction: updatedLedger,
       };
     } catch (err) {
+      const message =
+        err instanceof HttpException
+          ? (typeof err.getResponse() === 'string'
+              ? err.getResponse()
+              : ((err.getResponse() as { message?: string | string[] })
+                  .message ?? err.message))
+          : err instanceof Error
+            ? err.message
+            : 'Failed to initialize top-up';
+      const failureReason = Array.isArray(message)
+        ? message.join(', ')
+        : String(message);
+
       await this.prisma.walletTransaction.update({
         where: { id: ledger.id },
-        data: { status: PaymentStatus.failed },
+        data: {
+          status: PaymentStatus.failed,
+          metadata: {
+            purpose: 'wallet_topup',
+            userId,
+            failureReason,
+          },
+        },
       });
-      throw new BadRequestException(
-        err instanceof Error ? err.message : 'Failed to initialize top-up',
-      );
+
+      if (err instanceof HttpException) {
+        throw err;
+      }
+      throw new BadRequestException(failureReason);
     }
   }
 }

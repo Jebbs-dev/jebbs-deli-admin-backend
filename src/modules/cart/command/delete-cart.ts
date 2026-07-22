@@ -1,8 +1,12 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@libs/shared/system/database/prisma.service';
 
 export class DeleteCartCommand {
-  constructor(public readonly cartId: string) {}
+  constructor(
+    public readonly cartId: string,
+    public readonly userId: string,
+  ) {}
 }
 
 @CommandHandler(DeleteCartCommand)
@@ -10,11 +14,16 @@ export class DeleteCartHandler implements ICommandHandler<DeleteCartCommand> {
   constructor(private readonly prisma: PrismaService) {}
 
   async execute(command: DeleteCartCommand) {
-    const groups = await this.prisma.cartStoreGroup.findMany({ where: { cartId: command.cartId } });
-    for (const group of groups) {
-      await this.prisma.cartItem.deleteMany({ where: { cartStoreGroupId: group.id } });
+    const cart = await this.prisma.cart.findUnique({
+      where: { id: command.cartId },
+    });
+    if (!cart) {
+      throw new NotFoundException('Cart not found');
     }
-    await this.prisma.cartStoreGroup.deleteMany({ where: { cartId: command.cartId } });
+    if (cart.userId !== command.userId) {
+      throw new ForbiddenException('Cannot delete another user cart');
+    }
+
     await this.prisma.cart.delete({ where: { id: command.cartId } });
     return { message: 'Cart deleted successfully' };
   }

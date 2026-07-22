@@ -47,7 +47,8 @@ export class WalletService {
     }
 
     const paidAt = data.paid_at ? new Date(data.paid_at) : null;
-    const isSuccess = data.status === 'success' && !!paidAt;
+    // Paystack may omit paid_at briefly; status=success is authoritative.
+    const isSuccess = data.status === 'success';
     if (!isSuccess) {
       return { settled: false, message: 'Transaction not yet paid' };
     }
@@ -80,13 +81,39 @@ export class WalletService {
 
       // Optional amount check vs Paystack kobo
       if (typeof data.amount === 'number') {
-        const expectedKobo = Math.round(creditAmount.toNumber() * 100);
+        const expectedKobo = creditAmount.mul(100).round().toNumber();
         if (data.amount !== expectedKobo) {
           this.logger.warn(
             `Top-up amount mismatch ref=${reference} expected=${expectedKobo} got=${data.amount}`,
           );
           throw new BadRequestException('Top-up amount mismatch');
         }
+      }
+
+      // Claim the pending/processing row so concurrent webhook+verify cannot double-credit.
+      const claimed = await tx.walletTransaction.updateMany({
+        where: {
+          id: ledger.id,
+          status: {
+            in: [PaymentStatus.pending, PaymentStatus.processing],
+          },
+        },
+        data: { status: PaymentStatus.processing },
+      });
+
+      if (claimed.count === 0) {
+        const current = await tx.walletTransaction.findUnique({
+          where: { reference },
+          include: { wallet: true },
+        });
+        if (current?.status === PaymentStatus.success) {
+          return {
+            settled: true,
+            wallet: current.wallet,
+            transaction: current,
+          };
+        }
+        throw new BadRequestException('Top-up could not be settled');
       }
 
       const updatedWallet = await tx.wallet.update({
@@ -103,7 +130,7 @@ export class WalletService {
             ...((ledger.metadata as object) ?? {}),
             paystackId: data.id ?? null,
             channel: data.channel ?? null,
-            paidAt: data.paid_at ?? null,
+            paidAt: data.paid_at ?? paidAt?.toISOString() ?? null,
             gatewayResponse: data.gateway_response ?? null,
           } as Prisma.InputJsonValue,
         },

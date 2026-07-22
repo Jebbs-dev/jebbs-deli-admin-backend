@@ -148,6 +148,7 @@ model CartStoreGroup {
   store     Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
   cartItems CartItem[]
 
+  @@unique([cartId, storeId])
   @@index([cartId])
   @@index([storeId])
   @@map("cart_store_groups")

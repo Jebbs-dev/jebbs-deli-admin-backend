@@ -81,15 +81,13 @@ export class CreateCartHandler implements ICommandHandler<CreateCartCommand> {
             data: { cartId: cart.id, storeId },
           });
         }
-        for (const item of items) {
-          await this.prisma.cartItem.create({
-            data: {
-              cartStoreGroupId: cartStoreGroup.id,
-              productId: item.productId,
-              quantity: item.quantity || 1,
-            },
-          });
-        }
+        await this.prisma.cartItem.createMany({
+          data: items.map((item) => ({
+            cartStoreGroupId: cartStoreGroup.id,
+            productId: item.productId,
+            quantity: item.quantity || 1,
+          })),
+        });
       }
     }
 
