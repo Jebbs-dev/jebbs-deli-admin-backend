@@ -1,16 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
+import type { ReactElement } from 'react';
 import { Resend } from 'resend';
 import { ConfigService } from '@libs/shared/system/config/config.service';
-import { renderOrderPaidEmail } from '@emails/order-paid';
-
-export type OrderPaidEmailInput = {
-  to: string;
-  name: string;
-  orderId: string;
-  amount: string;
-  currency: string;
-  reference: string;
-};
+import OrderPaidEmail, {
+  type OrderPaidEmailProps,
+} from '@emails/order-paid';
+import WalletTopupEmail, {
+  type WalletTopupEmailProps,
+} from '@emails/wallet-topup';
 
 @Injectable()
 export class EmailService {
@@ -27,26 +24,49 @@ export class EmailService {
     }
   }
 
-  async sendOrderPaidEmail(input: OrderPaidEmailInput): Promise<void> {
+  sendOrderPaidEmail(input: OrderPaidEmailProps & { to: string }) {
+    const { to, ...props } = input;
+    return this.send({
+      to,
+      subject: `Payment confirmed for order ${props.orderId}`,
+      react: OrderPaidEmail(props),
+      label: 'order paid email',
+    });
+  }
+
+  sendWalletTopupEmail(input: WalletTopupEmailProps & { to: string }) {
+    const { to, ...props } = input;
+    return this.send({
+      to,
+      subject: `Wallet top-up of ${props.currency} ${props.amount} confirmed`,
+      react: WalletTopupEmail(props),
+      label: 'wallet top-up email',
+    });
+  }
+
+  private async send(options: {
+    to: string;
+    subject: string;
+    react: ReactElement;
+    label: string;
+  }): Promise<void> {
     if (!this.resend) {
-      this.logger.debug(`Skip order paid email to ${input.to} (no Resend key)`);
+      this.logger.debug(`Skip ${options.label} to ${options.to} (no Resend key)`);
       return;
     }
-
-    const { subject, html } = renderOrderPaidEmail(input);
 
     try {
       await this.resend.emails.send({
         from: this.fromEmail,
-        to: input.to,
-        subject,
-        html,
+        to: options.to,
+        subject: options.subject,
+        react: options.react,
       });
     } catch (error) {
       this.logger.error(
-        `Failed to send order paid email: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to send ${options.label}: ${error instanceof Error ? error.message : String(error)}`,
       );
-      throw new Error('Failed to send order paid email');
+      throw new Error(`Failed to send ${options.label}`);
     }
   }
 }

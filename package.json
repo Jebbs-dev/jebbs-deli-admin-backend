@@ -12,10 +12,6 @@
     "start:debug": "nest start --debug --watch",
     "postinstall": "prisma generate",
     "seed": "node scripts/run-ts.js prisma/seed.ts",
-    "import:chowdeck": "node scripts/run-ts.js scripts/chowdeck/import-chowdeck.ts",
-    "import:chowdeck:resolve-addresses": "node scripts/run-ts.js scripts/chowdeck/resolve-addresses.ts",
-    "provision:store-users": "node scripts/run-ts.js scripts/chowdeck/provision-store-users.ts",
-    "activate:stores": "node scripts/run-ts.js scripts/chowdeck/activate-all-stores.ts",
     "email:dev": "email dev --dir emails",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

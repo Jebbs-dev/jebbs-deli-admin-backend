@@ -9,46 +9,49 @@ import {
   Text,
 } from '@react-email/components';
 
-export type OrderPaidEmailProps = {
+export type WalletTopupEmailProps = {
   name?: string;
-  orderId: string;
   amount: string;
   currency: string;
+  balance: string;
   reference: string;
 };
 
-export function OrderPaidEmail({
+export function WalletTopupEmail({
   name = 'there',
-  orderId,
   amount,
   currency,
+  balance,
   reference,
-}: OrderPaidEmailProps) {
+}: WalletTopupEmailProps) {
   return (
     <Html>
       <Head />
-      <Preview>Your Jebbs Deli order payment was successful</Preview>
+      <Preview>Your Jebbs Deli wallet top-up was successful</Preview>
       <Body style={main}>
         <Container style={container}>
-          <Heading style={heading}>Payment confirmed</Heading>
+          <Heading style={heading}>Top-up confirmed</Heading>
           <Text style={text}>Hi {name},</Text>
           <Text style={text}>
-            We received your payment for order <strong>{orderId}</strong>.
+            Your Jebbs Deli wallet was credited successfully.
           </Text>
           <Section style={box}>
             <Text style={meta}>
               Amount: {currency} {amount}
             </Text>
+            <Text style={meta}>
+              New balance: {currency} {balance}
+            </Text>
             <Text style={meta}>Reference: {reference}</Text>
           </Section>
-          <Text style={text}>Thanks for ordering with Jebbs Deli.</Text>
+          <Text style={text}>You can now pay for orders with your wallet.</Text>
         </Container>
       </Body>
     </Html>
   );
 }
 
-export default OrderPaidEmail;
+export default WalletTopupEmail;
 
 const main = {
   backgroundColor: '#fff8f1',

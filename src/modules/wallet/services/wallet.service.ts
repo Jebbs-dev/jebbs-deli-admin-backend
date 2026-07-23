@@ -7,6 +7,7 @@ import {
 import { Prisma } from '@generated/prisma/client';
 import { PaymentStatus, WalletTxType } from '@generated/prisma/enums';
 import { PrismaService } from '@libs/shared/system/database/prisma.service';
+import { EmailService } from '@libs/shared/provider/email/email.service';
 import { PaystackChargeData } from '../../payment/services/settle-payment.service';
 import { randomUUID } from 'node:crypto';
 
@@ -14,7 +15,10 @@ import { randomUUID } from 'node:crypto';
 export class WalletService {
   private readonly logger = new Logger(WalletService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly emailService: EmailService,
+  ) {}
 
   async ensureWallet(userId: string) {
     const existing = await this.prisma.wallet.findUnique({
@@ -53,7 +57,7 @@ export class WalletService {
       return { settled: false, message: 'Transaction not yet paid' };
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const ledger = await tx.walletTransaction.findUnique({
         where: { reference },
         include: { wallet: true },
@@ -67,7 +71,12 @@ export class WalletService {
 
       if (ledger.status === PaymentStatus.success) {
         this.logger.debug(`Top-up already credited: ${reference}`);
-        return { settled: true, wallet: ledger.wallet, transaction: ledger };
+        return {
+          settled: true,
+          newlyCredited: false,
+          wallet: ledger.wallet,
+          transaction: ledger,
+        };
       }
 
       if (ledger.type !== WalletTxType.topup) {
@@ -109,6 +118,7 @@ export class WalletService {
         if (current?.status === PaymentStatus.success) {
           return {
             settled: true,
+            newlyCredited: false,
             wallet: current.wallet,
             transaction: current,
           };
@@ -140,7 +150,59 @@ export class WalletService {
         `Wallet credited ${creditAmount.toString()} for ${reference}`,
       );
 
-      return { settled: true, wallet: updatedWallet, transaction: updatedTx };
+      return {
+        settled: true,
+        newlyCredited: true,
+        wallet: updatedWallet,
+        transaction: updatedTx,
+      };
+    });
+
+    if (result.settled && result.newlyCredited) {
+      void this.notifyTopupEmail(reference, result.wallet).catch(
+        (err: unknown) => {
+          this.logger.warn(
+            `Wallet top-up email failed for ${reference}: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        },
+      );
+    }
+
+    return result;
+  }
+
+  private async notifyTopupEmail(
+    reference: string,
+    wallet: {
+      id: string;
+      userId: string;
+      balance: Prisma.Decimal;
+      currency: string;
+    },
+  ) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: wallet.userId },
+      select: { email: true, name: true },
+    });
+    if (!user?.email) {
+      return;
+    }
+
+    const tx = await this.prisma.walletTransaction.findUnique({
+      where: { reference },
+      select: { amount: true },
+    });
+    if (!tx) {
+      return;
+    }
+
+    await this.emailService.sendWalletTopupEmail({
+      to: user.email,
+      name: user.name ?? 'there',
+      amount: tx.amount.toString(),
+      currency: wallet.currency,
+      balance: wallet.balance.toString(),
+      reference,
     });
   }
 
