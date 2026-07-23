@@ -2,6 +2,7 @@ import 'dotenv/config';
 import 'reflect-metadata';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from '@libs/shared/system/common/filters/http-exception.filter';
 import { TransformInterceptor } from '@libs/shared/system/common/interceptors/transform.interceptor';
@@ -21,9 +22,12 @@ async function bootstrap() {
   const logger = app.get(AppLoggerService);
   app.useLogger(logger);
 
+  app.use(cookieParser());
+
   app.enableCors({
     origin: [
       'http://localhost:3000',
+      'http://localhost:3001',
       'https://jebbs-deli.vercel.app',
       'https://jebbs-deli-admin.vercel.app',
     ],

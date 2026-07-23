@@ -13,13 +13,16 @@ export const paginatedResultSchema = <T extends z.ZodTypeAny>(itemSchema: T) =>
     previous: z.boolean(),
   });
 
-export const authTokensResponseSchema = z.object({
-  accessToken: z.string(),
-  refreshToken: z.string(),
+export const authLoginResponseSchema = z.object({
+  message: z.string(),
   user: recordSchema.nullable().optional(),
 });
 
-export class AuthTokensResponseDto extends createZodDto(authTokensResponseSchema) {}
+export class AuthLoginResponseDto extends createZodDto(authLoginResponseSchema) {}
+
+/** @deprecated Tokens are set via httpOnly cookies; kept for transitional references */
+export const authTokensResponseSchema = authLoginResponseSchema;
+export class AuthTokensResponseDto extends AuthLoginResponseDto {}
 
 export const userWrapperResponseSchema = z.object({
   user: recordSchema,
