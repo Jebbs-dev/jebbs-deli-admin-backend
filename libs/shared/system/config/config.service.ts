@@ -2,6 +2,22 @@ import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class ConfigService {
+  constructor() {
+    const required =
+      this.nodeEnv === 'production'
+        ? ['DATABASE_URL', 'JWT_SECRET', 'JWT_REFRESH_SECRET']
+        : ['DATABASE_URL'];
+    const missing = required.filter((key) => !process.env[key]?.trim());
+    if (missing.length > 0) {
+      throw new Error(
+        `Missing required environment variables: ${missing.join(', ')}`,
+      );
+    }
+    if (this.nodeEnv === 'production' && !process.env.PAYSTACK_SECRET_KEY) {
+      throw new Error('Missing required environment variable: PAYSTACK_SECRET_KEY');
+    }
+  }
+
   get port(): number {
     return Number(process.env.PORT) || 8080;
   }
@@ -24,6 +40,14 @@ export class ConfigService {
 
   get paystackSecretKey(): string {
     return process.env.PAYSTACK_SECRET_KEY || '';
+  }
+
+  get paystackWebhookIps(): string[] {
+    const raw = process.env.PAYSTACK_WEBHOOK_IPS || '';
+    return raw
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
   }
 
   get jwtRefreshSecret(): string {

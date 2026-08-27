@@ -1,6 +1,6 @@
 generator client {
   provider     = "prisma-client"
-  output       = "../src/generated/prisma"
+  output       = "../generated/prisma"
   moduleFormat = "cjs"
 }
 
@@ -12,6 +12,7 @@ enum Role {
   USER
   ADMIN
   VENDOR
+  RIDER
 }
 
 enum Category {
@@ -34,8 +35,34 @@ enum SizeValue {
 
 enum OrderStatus {
   pending
+  paid
+  confirmed
+  preparing
+  ready
+  picked_up
+  in_transit
   delivered
   cancelled
+  failed
+}
+
+enum FulfillmentType {
+  delivery
+  pickup
+}
+
+enum StorePayoutStatus {
+  pending
+  verified
+  disabled
+}
+
+enum DeliveryAssignmentStatus {
+  assigned
+  picked_up
+  in_transit
+  delivered
+  failed
 }
 
 enum PaymentStatus {
@@ -56,6 +83,51 @@ enum WalletTxType {
   adjustment
 }
 
+enum OrderChargeType {
+  SERVICE_FEE
+  DELIVERY_FEE
+  BAG_FEE
+  SURGE_FEE
+}
+
+enum ChargeBeneficiary {
+  PLATFORM
+  VENDOR
+  LOGISTICS
+}
+
+enum SurgeType {
+  flat
+  percent
+}
+
+enum SettlementLedgerTxType {
+  order_credit
+  delivery_credit
+  adjustment
+  payout
+}
+
+enum SettlementLedgerStatus {
+  available
+  pending_payout
+  paid
+  failed
+}
+
+enum PayoutParty {
+  VENDOR
+  RIDER
+}
+
+enum PayoutBatchStatus {
+  pending
+  processing
+  completed
+  partial
+  failed
+}
+
 model User {
   id        String   @id @default(uuid(7))
   name      String?
@@ -68,12 +140,16 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  cart     Cart?
-  orders   Order[]
-  payments Payment[]
-  tokens   Token[]
-  store    Store?
-  wallet   Wallet?
+  cart                Cart?
+  orders              Order[]
+  payments            Payment[]
+  tokens              Token[]
+  store               Store?
+  wallet              Wallet?
+  riderProfile        RiderProfile?
+  riderWallet         RiderWallet?
+  orderStatusEvents   OrderStatusEvent[]
+  deliveryAssignments DeliveryAssignment[] @relation("RiderAssignments")
 
   @@map("users")
 }
@@ -96,8 +172,25 @@ model Store {
   totalReviews    Int?
   deliveryFee     Decimal  @default(0) @db.Decimal(12, 2)
 
+  /// Platform commission percent on commissionable vendor amounts (0–100).
+  commissionPercent        Decimal           @default(0) @db.Decimal(5, 2)
+  bagFeeEnabled            Boolean           @default(false)
+  bagFeeAmount             Decimal           @default(0) @db.Decimal(12, 2)
+  bagCommissionable        Boolean           @default(false)
+  surgeEnabled             Boolean           @default(false)
+  surgeType                SurgeType         @default(flat)
+  surgeValue               Decimal           @default(0) @db.Decimal(12, 2)
+  bankCode                 String?
+  bankName                 String?
+  accountNumber            String?
+  accountName              String?
+  paystackSubaccountCode   String?
+  paystackSubaccountStatus StorePayoutStatus @default(pending)
+  /// Paystack transfer recipient for scheduled vendor payouts
+  paystackRecipientCode    String?
+
   tags      String[]
-  isActive  Boolean  @default(true)
+  isActive  Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -107,6 +200,8 @@ model Store {
   payments        Payment[]        @relation("StoreToPayment")
   cartStoreGroups CartStoreGroup[]
   orderItems      OrderItem[]
+  storeWallet     StoreWallet?
+  storeLedgerTxs  StoreLedgerTx[]
 
   @@map("stores")
 }
@@ -188,11 +283,12 @@ model Product {
   updatedAt   DateTime   @updatedAt
 
   discount Discount? @relation(fields: [discountId], references: [id], onDelete: SetNull)
-  store    Store     @relation("StoreToProduct", fields: [storeId], references: [id], onDelete: Cascade)
+  store    Store     @relation("StoreToProduct", fields: [storeId], references: [id], onDelete: Restrict)
 
   cartItems  CartItem[]
   orderItems OrderItem[]
 
+  @@unique([id, storeId])
   @@index([storeId])
   @@index([discountId])
   @@index([category])
@@ -220,31 +316,82 @@ model Discount {
 }
 
 model Order {
-  id              String      @id @default(uuid(7))
+  id              String          @id @default(uuid(7))
   userId          String
   storeId         String
-  serviceFee      Decimal     @db.Decimal(12, 2)
-  deliveryFee     Decimal     @db.Decimal(12, 2)
-  subTotal        Decimal     @db.Decimal(12, 2)
-  totalPrice      Decimal     @db.Decimal(12, 2)
+  fulfillmentType FulfillmentType @default(delivery)
+  serviceFee      Decimal         @db.Decimal(12, 2)
+  deliveryFee     Decimal         @db.Decimal(12, 2)
+  bagFee          Decimal         @default(0) @db.Decimal(12, 2)
+  surgeFee        Decimal         @default(0) @db.Decimal(12, 2)
+  subTotal        Decimal         @db.Decimal(12, 2)
+  totalPrice      Decimal         @db.Decimal(12, 2)
+  /// Settlement snapshot: commission taken from commissionable vendor amounts
+  vendorCommission    Decimal @default(0) @db.Decimal(12, 2)
+  /// Settlement snapshot: vendor net payout
+  vendorPayout        Decimal @default(0) @db.Decimal(12, 2)
+  /// Copy of serviceFee at create (platform)
+  platformServiceFee  Decimal @default(0) @db.Decimal(12, 2)
+  /// Copy of deliveryFee at create (platform / logistics → rider)
+  platformDeliveryFee Decimal @default(0) @db.Decimal(12, 2)
   vendorAddress   String
   customerAddress String
-  status          OrderStatus @default(pending)
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  status          OrderStatus     @default(pending)
+  paidAt          DateTime?
+  settledAt       DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  payment            Payment?
+  payments           Payment[]
   walletTransactions WalletTransaction[]
+  statusEvents       OrderStatusEvent[]
+  assignment         DeliveryAssignment?
+  charges            OrderCharge[]
+  storeLedgerTxs     StoreLedgerTx[]
+  riderLedgerTxs     RiderLedgerTx[]
 
   orderItems OrderItem[]
   store      Store       @relation("StoreToOrder", fields: [storeId], references: [id], onDelete: Restrict)
 
+  @@unique([id, storeId])
   @@index([userId])
   @@index([storeId])
   @@index([status])
+  @@index([fulfillmentType])
   @@index([createdAt])
   @@map("orders")
+}
+
+model OrderCharge {
+  id             String            @id @default(uuid(7))
+  orderId        String
+  type           OrderChargeType
+  amount         Decimal           @db.Decimal(12, 2)
+  beneficiary    ChargeBeneficiary
+  commissionable Boolean           @default(false)
+  createdAt      DateTime          @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([type])
+  @@map("order_charges")
+}
+
+model OrderStatusEvent {
+  id      String      @id @default(uuid(7))
+  orderId String
+  status  OrderStatus
+  at      DateTime    @default(now())
+  actorId String?
+  note    String?
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([orderId, at])
+  @@map("order_status_events")
 }
 
 model OrderItem {
@@ -265,6 +412,181 @@ model OrderItem {
   @@index([productId])
   @@index([storeId])
   @@map("order_items")
+}
+
+model RiderProfile {
+  id                    String   @id @default(uuid(7))
+  userId                String   @unique
+  isAvailable           Boolean  @default(true)
+  vehicle               String?
+  notes                 String?
+  bankCode              String?
+  bankName              String?
+  accountNumber         String?
+  accountName           String?
+  paystackRecipientCode String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("rider_profiles")
+}
+
+model DeliveryAssignment {
+  id            String                   @id @default(uuid(7))
+  orderId       String                   @unique
+  riderId       String
+  status        DeliveryAssignmentStatus @default(assigned)
+  failureReason String?
+  assignedAt    DateTime                 @default(now())
+  pickedUpAt    DateTime?
+  inTransitAt   DateTime?
+  deliveredAt   DateTime?
+  failedAt      DateTime?
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+
+  order          Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  rider          User            @relation("RiderAssignments", fields: [riderId], references: [id], onDelete: Restrict)
+  riderLedgerTxs RiderLedgerTx[]
+
+  @@index([riderId])
+  @@index([status])
+  @@map("delivery_assignments")
+}
+
+model StoreWallet {
+  id        String   @id @default(uuid(7))
+  storeId   String   @unique
+  balance   Decimal  @default(0) @db.Decimal(12, 2)
+  currency  String   @default("NGN")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  store        Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  transactions StoreLedgerTx[]
+
+  @@map("store_wallets")
+}
+
+model StoreLedgerTx {
+  id           String                 @id @default(uuid(7))
+  storeId      String
+  walletId     String
+  type         SettlementLedgerTxType
+  amount       Decimal                @db.Decimal(12, 2)
+  balanceAfter Decimal                @db.Decimal(12, 2)
+  status       SettlementLedgerStatus @default(available)
+  reference    String                 @unique
+  orderId      String?
+  paymentId    String?
+  payoutBatchId String?
+  description  String?
+  metadata     Json?
+  createdAt    DateTime               @default(now())
+
+  store       Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  wallet      StoreWallet  @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  order       Order?       @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  payoutBatch PayoutBatch? @relation(fields: [payoutBatchId], references: [id], onDelete: SetNull)
+
+  @@index([storeId, createdAt])
+  @@index([walletId, status])
+  @@index([orderId])
+  @@index([payoutBatchId])
+  @@map("store_ledger_txs")
+}
+
+model RiderWallet {
+  id        String   @id @default(uuid(7))
+  userId    String   @unique
+  balance   Decimal  @default(0) @db.Decimal(12, 2)
+  currency  String   @default("NGN")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions RiderLedgerTx[]
+
+  @@map("rider_wallets")
+}
+
+model RiderLedgerTx {
+  id            String                 @id @default(uuid(7))
+  userId        String
+  walletId      String
+  type          SettlementLedgerTxType
+  amount        Decimal                @db.Decimal(12, 2)
+  balanceAfter  Decimal                @db.Decimal(12, 2)
+  status        SettlementLedgerStatus @default(available)
+  reference     String                 @unique
+  orderId       String?
+  assignmentId  String?
+  payoutBatchId String?
+  description   String?
+  metadata      Json?
+  createdAt     DateTime               @default(now())
+
+  wallet      RiderWallet          @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  order       Order?               @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  assignment  DeliveryAssignment?  @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
+  payoutBatch PayoutBatch?         @relation(fields: [payoutBatchId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([walletId, status])
+  @@index([orderId])
+  @@index([payoutBatchId])
+  @@map("rider_ledger_txs")
+}
+
+model PayoutBatch {
+  id               String            @id @default(uuid(7))
+  party            PayoutParty
+  periodKey        String
+  periodStart      DateTime
+  periodEnd        DateTime
+  status           PayoutBatchStatus @default(pending)
+  totalAmount      Decimal           @default(0) @db.Decimal(12, 2)
+  transferCount    Int               @default(0)
+  successCount     Int               @default(0)
+  failureCount     Int               @default(0)
+  metadata         Json?
+  createdAt        DateTime          @default(now())
+  completedAt      DateTime?
+
+  storeLedgerTxs StoreLedgerTx[]
+  riderLedgerTxs RiderLedgerTx[]
+  transfers      PayoutTransfer[]
+
+  @@unique([party, periodKey])
+  @@index([status])
+  @@index([createdAt])
+  @@map("payout_batches")
+}
+
+model PayoutTransfer {
+  id              String                 @id @default(uuid(7))
+  batchId         String
+  party           PayoutParty
+  storeId         String?
+  riderUserId     String?
+  recipientCode   String
+  amount          Decimal                @db.Decimal(12, 2)
+  status          SettlementLedgerStatus @default(pending_payout)
+  paystackTransferCode String?
+  paystackReference    String?           @unique
+  failureReason   String?
+  createdAt       DateTime               @default(now())
+  paidAt          DateTime?
+
+  batch PayoutBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([batchId])
+  @@index([storeId])
+  @@index([riderUserId])
+  @@index([status])
+  @@map("payout_transfers")
 }
 
 model PaystackTransaction {
@@ -323,7 +645,7 @@ model PaystackTransaction {
 model Payment {
   id            String        @id @default(uuid(7))
   userId        String
-  orderId       String        @unique
+  orderId       String
   storeId       String
   /// Gateway transaction id from Paystack (not a relation FK)
   paystackId    BigInt?       @unique
@@ -345,6 +667,7 @@ model Payment {
   walletTransaction   WalletTransaction?
 
   @@index([userId])
+  @@index([orderId])
   @@index([storeId])
   @@index([status])
   @@index([createdAt])
@@ -401,15 +724,19 @@ model WebhookEvent {
 }
 
 model Token {
-  id        String   @id @default(uuid(7))
-  userId    String
-  token     String   @unique
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+  id               String    @id @default(uuid(7))
+  userId           String
+  token            String    @unique
+  familyId         String
+  replacedByTokenId String?
+  revokedAt        DateTime?
+  expiresAt        DateTime
+  createdAt        DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([familyId])
   @@index([expiresAt])
   @@map("tokens")
 }

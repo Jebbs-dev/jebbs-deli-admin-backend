@@ -1,0 +1,8 @@
+dist
+generated
+node_modules
+uploads
+coverage
+pnpm-lock.yaml
+scripts/chowdeck
+*.md

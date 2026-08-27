@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { ReactElement } from 'react';
 import { Resend } from 'resend';
-import { ConfigService } from '@libs/shared/system/config/config.service';
+import { ConfigService } from '@shared/system/config/config.service';
 import OrderPaidEmail, {
   type OrderPaidEmailProps,
 } from '@emails/order-paid';
@@ -66,7 +66,7 @@ export class EmailService {
       this.logger.error(
         `Failed to send ${options.label}: ${error instanceof Error ? error.message : String(error)}`,
       );
-      throw new Error(`Failed to send ${options.label}`);
+      throw new Error(`Failed to send ${options.label}`, { cause: error });
     }
   }
 }

@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { PrismaClient } from '../src/generated/prisma/client';
+import { PrismaClient } from '../generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 
@@ -55,6 +55,34 @@ async function main() {
     }
 
     console.log(`Seeded ${modelName} with data from ${fileName}`);
+  }
+
+  // Seed a demo rider (password: rider123)
+  const bcrypt = await import('bcrypt');
+  const riderEmail = 'rider@jebbsdeli.test';
+  const existingRider = await prisma.user.findUnique({ where: { email: riderEmail } });
+  if (!existingRider) {
+    const hashed = await bcrypt.hash('rider123', 10);
+    await prisma.user.create({
+      data: {
+        name: 'Demo Rider',
+        email: riderEmail,
+        password: hashed,
+        telephone: '+2348000000001',
+        role: 'RIDER',
+        riderProfile: {
+          create: {
+            isAvailable: true,
+            vehicle: 'bike',
+            notes: 'Seeded rider',
+          },
+        },
+        riderWallet: { create: {} },
+      },
+    });
+    console.log(`Seeded rider ${riderEmail} / rider123`);
+  } else {
+    console.log(`Rider ${riderEmail} already exists`);
   }
 }
 
