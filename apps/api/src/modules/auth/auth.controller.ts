@@ -67,8 +67,8 @@ export class AuthController {
     const result = await this.commandBus.execute(
       new LoginCommand(dto.email, dto.password),
     );
-    setAuthCookies(res, result.accessToken, result.refreshToken);
-    return { message: 'Login successful', user: result.user };
+    const csrfToken = setAuthCookies(res, result.accessToken, result.refreshToken);
+    return { message: 'Login successful', user: result.user, csrfToken };
   }
 
   @Public()
@@ -86,8 +86,8 @@ export class AuthController {
     const result = await this.commandBus.execute(
       new LoginAdminCommand(dto.email, dto.password),
     );
-    setAuthCookies(res, result.accessToken, result.refreshToken);
-    return { message: 'Admin login successful', user: result.user };
+    const csrfToken = setAuthCookies(res, result.accessToken, result.refreshToken);
+    return { message: 'Admin login successful', user: result.user, csrfToken };
   }
 
   @Public()
@@ -105,8 +105,8 @@ export class AuthController {
     const result = await this.commandBus.execute(
       new LoginVendorCommand(dto.email, dto.password),
     );
-    setAuthCookies(res, result.accessToken, result.refreshToken);
-    return { message: 'Vendor login successful', user: result.user };
+    const csrfToken = setAuthCookies(res, result.accessToken, result.refreshToken);
+    return { message: 'Vendor login successful', user: result.user, csrfToken };
   }
 
   @Public()
@@ -124,8 +124,8 @@ export class AuthController {
     const result = await this.commandBus.execute(
       new LoginRiderCommand(dto.email, dto.password),
     );
-    setAuthCookies(res, result.accessToken, result.refreshToken);
-    return { message: 'Rider login successful', user: result.user };
+    const csrfToken = setAuthCookies(res, result.accessToken, result.refreshToken);
+    return { message: 'Rider login successful', user: result.user, csrfToken };
   }
 
   @Roles('ADMIN')
@@ -154,8 +154,8 @@ export class AuthController {
     const result = await this.commandBus.execute(
       new RefreshTokenCommand(refreshToken),
     );
-    setAuthCookies(res, result.accessToken, result.refreshToken);
-    return { message: 'Token refreshed successfully' };
+    const csrfToken = setAuthCookies(res, result.accessToken, result.refreshToken);
+    return { message: 'Token refreshed successfully', csrfToken };
   }
 
   @Post('logout')
@@ -182,6 +182,7 @@ export class AuthController {
   })
   async profile(
     @CurrentUser('id') userId: string,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
     const user = await this.prisma.user.findUnique({
@@ -202,8 +203,12 @@ export class AuthController {
       throw new UnauthorizedException('User not found');
     }
 
-    setCsrfCookie(res);
+    const existing = req.cookies?.csrf_token;
+    const csrfToken = setCsrfCookie(
+      res,
+      typeof existing === 'string' && existing.length > 0 ? existing : undefined,
+    );
 
-    return { user };
+    return { user, csrfToken };
   }
 }

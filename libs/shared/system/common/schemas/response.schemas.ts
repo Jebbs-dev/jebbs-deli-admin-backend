@@ -16,6 +16,7 @@ export const paginatedResultSchema = <T extends z.ZodTypeAny>(itemSchema: T) =>
 export const authLoginResponseSchema = z.object({
   message: z.string(),
   user: recordSchema.nullable().optional(),
+  csrfToken: z.string().optional(),
 });
 
 export class AuthLoginResponseDto extends createZodDto(authLoginResponseSchema) {}
@@ -26,12 +27,14 @@ export class AuthTokensResponseDto extends AuthLoginResponseDto {}
 
 export const userWrapperResponseSchema = z.object({
   user: recordSchema,
+  csrfToken: z.string().optional(),
 });
 
 export class UserWrapperResponseDto extends createZodDto(userWrapperResponseSchema) {}
 
 export const messageResponseSchema = z.object({
   message: z.string(),
+  csrfToken: z.string().optional(),
 });
 
 export class MessageResponseDto extends createZodDto(messageResponseSchema) {}

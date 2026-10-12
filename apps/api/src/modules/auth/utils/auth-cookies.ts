@@ -34,7 +34,7 @@ export function setAuthCookies(
     refreshToken,
     cookieOptions(REFRESH_TOKEN_MAX_AGE_MS),
   );
-  setCsrfCookie(res);
+  return setCsrfCookie(res);
 }
 
 export function clearAuthCookies(res: Response) {
